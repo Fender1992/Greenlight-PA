@@ -66,8 +66,10 @@ export async function GET(request: Request) {
       paRequests?.filter((r) => r.priority === "urgent").length || 0;
 
     const approvalRate =
-      totalRequests > 0
-        ? ((approvedCount / (approvedCount + deniedCount)) * 100).toFixed(1)
+      totalRequests > 0 && approvedCount + deniedCount > 0
+        ? Number(
+            ((approvedCount / (approvedCount + deniedCount)) * 100).toFixed(1)
+          )
         : 0;
 
     // Calculate average turnaround time
@@ -138,13 +140,15 @@ export async function GET(request: Request) {
       ).length;
       const monthApprovalRate =
         monthApproved + monthDenied > 0
-          ? ((monthApproved / (monthApproved + monthDenied)) * 100).toFixed(1)
+          ? Number(
+              ((monthApproved / (monthApproved + monthDenied)) * 100).toFixed(1)
+            )
           : 0;
 
       monthlyTrend.push({
         month: monthDate.toLocaleDateString("en-US", { month: "short" }),
         requests: monthRequests.length,
-        approvalRate: parseFloat(monthApprovalRate),
+        approvalRate: monthApprovalRate,
       });
     }
 
@@ -153,7 +157,7 @@ export async function GET(request: Request) {
       data: {
         overall: {
           totalRequests,
-          approvalRate: parseFloat(approvalRate),
+          approvalRate,
           avgTurnaroundDays,
           urgentRequests: urgentCount,
         },

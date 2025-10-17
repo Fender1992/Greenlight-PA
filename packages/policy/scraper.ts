@@ -180,7 +180,7 @@ Expedited review NOT typically available for non-emergent back pain`,
  */
 export async function extractPolicyList(
   url: string,
-  selector?: string
+  _selector?: string
 ): Promise<string[]> {
   console.log(`[Policy Scraper] Extracting policy list from ${url}`);
 

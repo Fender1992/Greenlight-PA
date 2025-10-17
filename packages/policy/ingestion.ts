@@ -7,7 +7,6 @@ import { scrapePolicies } from "./scraper";
 import { normalizePolicy, validatePolicy } from "./normalizer";
 import type {
   ScraperConfig,
-  IngestionJob,
   IngestionResult,
   PolicySnippet,
   PolicyContent,

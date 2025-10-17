@@ -1,6 +1,6 @@
 # Greenlight PA - Build Status
 
-**Last Updated:** 2025-10-17
+**Last Updated:** 2025-10-17 (Env alignment & build validation)
 
 ---
 
@@ -168,9 +168,9 @@
 
 ### Latest Build
 
-- **Status:** Not yet built (local setup only)
+- **Status:** ✅ Build passes locally (self-hosted fonts, Supabase env stubs)
 - **Date:** 2025-10-17
-- **Environment:** Development
+- **Environment:** Development (Node 22)
 
 ### Deployment History
 
@@ -193,6 +193,7 @@
 - Vitest 2.1.8 (unit tests)
 - Playwright 1.49.1 (e2e tests)
 - Testing Library (React)
+- ⚠️ Vitest currently crashes under Node 22 (tinypool worker exit); rerun on Node 20 or await upstream fix
 
 ### Code Quality
 
@@ -224,6 +225,14 @@
 ---
 
 ## Recent Changes
+
+### 2025-10-17 - Environment & Build Hardening
+
+- ✅ Aligned Supabase server env usage with Vercel variable names and documentation
+- ✅ Tightened Supabase typings and metrics calculations to satisfy `tsc --noEmit`
+- ✅ Local Next.js build succeeds after self-hosting fonts (no external fetch required)
+- ✅ Updated workspace test scripts for consistency (`--pool=forks`, `--passWithNoTests`)
+- ⚠️ Vitest currently crashes under Node 22 (tinypool worker exit); see Testing notes for mitigation
 
 ### 2025-10-17 - Section 8 Complete (Metrics & Nudges)
 

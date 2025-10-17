@@ -22,10 +22,10 @@ describe("PDF Generator", () => {
 
     const buffer = await pdfToBuffer(doc);
 
-    expect(buffer).toBeInstanceOf(Buffer);
+    expect(buffer).toBeInstanceOf(Uint8Array);
     expect(buffer.length).toBeGreaterThan(0);
     // PDF files start with "%PDF"
-    expect(buffer.toString("utf-8", 0, 4)).toBe("%PDF");
+    expect(Buffer.from(buffer).toString("utf-8", 0, 4)).toBe("%PDF");
   });
 
   it("should add header to PDF", async () => {
@@ -34,7 +34,7 @@ describe("PDF Generator", () => {
 
     const buffer = await pdfToBuffer(doc);
 
-    expect(buffer).toBeInstanceOf(Buffer);
+    expect(buffer).toBeInstanceOf(Uint8Array);
     expect(buffer.length).toBeGreaterThan(0);
   });
 
@@ -44,7 +44,7 @@ describe("PDF Generator", () => {
 
     const buffer = await pdfToBuffer(doc);
 
-    expect(buffer).toBeInstanceOf(Buffer);
+    expect(buffer).toBeInstanceOf(Uint8Array);
     expect(buffer.length).toBeGreaterThan(0);
   });
 
@@ -52,7 +52,7 @@ describe("PDF Generator", () => {
     const doc = createPDF();
     const buffer = await pdfToBuffer(doc);
 
-    expect(buffer).toBeInstanceOf(Buffer);
+    expect(buffer).toBeInstanceOf(Uint8Array);
     expect(buffer.length).toBeGreaterThan(0);
   });
 });
