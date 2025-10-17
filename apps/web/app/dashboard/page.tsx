@@ -1,48 +1,12 @@
-/**
- * ⚠️  READ/UPDATE STATUS.md BEFORE & AFTER CHANGES
- * Component: PA Worklist | Status: [Check STATUS.md] | Modified: 2025-10-17
- */
-
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { apiGet, ApiResponse } from "@web/lib/api";
+import type { PaRequestWithRelations } from "@web/types/api";
 
-// Mock data for demo
-const MOCK_PA_REQUESTS = [
-  {
-    id: "PA-001",
-    patientName: "Smith, John",
-    modality: "MRI Brain",
-    payer: "Blue Cross",
-    status: "draft",
-    priority: "standard",
-    submittedDate: null,
-    createdDate: "2025-10-15",
-  },
-  {
-    id: "PA-002",
-    patientName: "Doe, Jane",
-    modality: "CT Chest",
-    payer: "Aetna",
-    status: "submitted",
-    priority: "urgent",
-    submittedDate: "2025-10-16",
-    createdDate: "2025-10-14",
-  },
-  {
-    id: "PA-003",
-    patientName: "Johnson, Mary",
-    modality: "MRI Lumbar Spine",
-    payer: "United Healthcare",
-    status: "approved",
-    priority: "standard",
-    submittedDate: "2025-10-10",
-    createdDate: "2025-10-08",
-  },
-];
-
-const STATUS_COLORS = {
+const STATUS_COLORS: Record<string, string> = {
   draft: "bg-gray-100 text-gray-800",
   submitted: "bg-blue-100 text-blue-800",
   pending_info: "bg-yellow-100 text-yellow-800",
@@ -51,29 +15,79 @@ const STATUS_COLORS = {
   appealed: "bg-purple-100 text-purple-800",
 };
 
-const PRIORITY_COLORS = {
+const PRIORITY_COLORS: Record<string, string> = {
   standard: "text-gray-600",
   urgent: "text-red-600 font-semibold",
 };
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString();
+}
 
 export default function WorklistPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredRequests = MOCK_PA_REQUESTS.filter((req) => {
-    const matchesStatus = statusFilter === "all" || req.status === statusFilter;
-    const matchesSearch =
-      searchQuery === "" ||
-      req.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      req.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      req.modality.toLowerCase().includes(searchQuery.toLowerCase());
-
-    return matchesStatus && matchesSearch;
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["pa-requests"],
+    queryFn: async () => {
+      const response = await apiGet<ApiResponse<PaRequestWithRelations[]>>(
+        "/api/pa-requests"
+      );
+      if (!response.success) {
+        throw new Error(response.error || "Failed to load worklist");
+      }
+      return response.data ?? [];
+    },
   });
+
+  const paRequests = data ?? [];
+
+  const filteredRequests = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    return paRequests.filter((req) => {
+      const matchesStatus = statusFilter === "all" || req.status === statusFilter;
+      const patientName = req.order?.patient?.name ?? "";
+      const modality = req.order?.modality ?? "";
+      const matchesSearch =
+        query === "" ||
+        patientName.toLowerCase().includes(query) ||
+        modality.toLowerCase().includes(query) ||
+        req.id.toLowerCase().includes(query);
+      return matchesStatus && matchesSearch;
+    });
+  }, [paRequests, statusFilter, searchQuery]);
+
+  const statusCounts = useMemo(() => {
+    return paRequests.reduce(
+      (acc, req) => {
+        acc.total += 1;
+        acc[req.status] = (acc[req.status] || 0) + 1;
+        return acc;
+      },
+      { total: 0 } as Record<string, number>
+    );
+  }, [paRequests]);
+
+  const renderStatusBadge = (status: string) => (
+    <span
+      className={`px-3 py-1 inline-flex text-xs font-semibold rounded-full ${
+        STATUS_COLORS[status] ?? "bg-gray-100 text-gray-800"
+      }`}
+    >
+      {status.replace("_", " ")}
+    </span>
+  );
 
   return (
     <div className="px-4 sm:px-0">
-      {/* Header */}
       <div className="sm:flex sm:items-center sm:justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">PA Worklist</h1>
@@ -91,10 +105,8 @@ export default function WorklistPage() {
         </div>
       </div>
 
-      {/* Filters */}
       <div className="bg-white rounded-lg shadow mb-6 p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Search */}
           <div>
             <label
               htmlFor="search"
@@ -112,7 +124,6 @@ export default function WorklistPage() {
             />
           </div>
 
-          {/* Status Filter */}
           <div>
             <label
               htmlFor="status"
@@ -138,125 +149,147 @@ export default function WorklistPage() {
         </div>
       </div>
 
-      {/* PA Requests Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                PA #
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Patient
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Modality
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Payer
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Priority
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {filteredRequests.length === 0 ? (
+        {isLoading ? (
+          <div className="py-12 text-center text-gray-500">
+            Loading PA requests…
+          </div>
+        ) : isError ? (
+          <div className="py-12 text-center text-red-600">
+            {(error as Error)?.message || "Failed to load worklist"}
+            <div className="mt-2">
+              <button
+                onClick={() => refetch()}
+                className="text-blue-600 hover:text-blue-800 text-sm"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        ) : (
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
               <tr>
-                <td
-                  colSpan={8}
-                  className="px-6 py-12 text-center text-gray-500"
-                >
-                  No PA requests found
-                </td>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  PA #
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Patient
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Modality
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Payer
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Priority
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Updated
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
-            ) : (
-              filteredRequests.map((request) => (
-                <tr
-                  key={request.id}
-                  className="hover:bg-gray-50 cursor-pointer"
-                  onClick={() =>
-                    (window.location.href = `/dashboard/pa/${request.id}`)
-                  }
-                >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                    {request.id}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {request.patientName}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {request.modality}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {request.payer}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${STATUS_COLORS[request.status as keyof typeof STATUS_COLORS]}`}
-                    >
-                      {request.status.replace("_", " ")}
-                    </span>
-                  </td>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredRequests.length === 0 ? (
+                <tr>
                   <td
-                    className={`px-6 py-4 whitespace-nowrap text-sm ${PRIORITY_COLORS[request.priority as keyof typeof PRIORITY_COLORS]}`}
+                    colSpan={8}
+                    className="px-6 py-12 text-center text-gray-500"
                   >
-                    {request.priority === "urgent" && "⚠️ "}
-                    {request.priority}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {request.submittedDate || request.createdDate}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Link
-                      href={`/dashboard/pa/${request.id}`}
-                      className="text-blue-600 hover:text-blue-900"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      View
-                    </Link>
+                    No PA requests found
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                filteredRequests.map((request) => (
+                  <tr key={request.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                      <Link
+                        href={`/dashboard/pa/${request.id}`}
+                        className="hover:underline"
+                      >
+                        {request.id}
+                      </Link>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {request.order?.patient?.name || "—"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {request.order?.modality || "—"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {request.payer?.name || "—"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {renderStatusBadge(request.status)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <span
+                        className={
+                          PRIORITY_COLORS[request.priority] ?? "text-gray-600"
+                        }
+                      >
+                        {request.priority}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDate(request.submitted_at ?? request.created_at)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <Link
+                        href={`/dashboard/pa/${request.id}`}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        View
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
 
-      {/* Summary Stats */}
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-sm text-gray-500">Total Requests</div>
           <div className="text-2xl font-bold text-gray-900">
-            {MOCK_PA_REQUESTS.length}
+            {statusCounts.total}
           </div>
+          <p className="text-xs text-gray-500">
+            Includes draft, submitted, and completed PAs
+          </p>
         </div>
+
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-sm text-gray-500">Draft</div>
           <div className="text-2xl font-bold text-gray-600">
-            {MOCK_PA_REQUESTS.filter((r) => r.status === "draft").length}
+            {statusCounts.draft || 0}
           </div>
+          <p className="text-xs text-gray-500">Requires additional work</p>
         </div>
+
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-sm text-gray-500">Submitted</div>
           <div className="text-2xl font-bold text-blue-600">
-            {MOCK_PA_REQUESTS.filter((r) => r.status === "submitted").length}
+            {statusCounts.submitted || 0}
           </div>
+          <p className="text-xs text-gray-500">Awaiting payer review</p>
         </div>
+
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-sm text-gray-500">Approved</div>
           <div className="text-2xl font-bold text-green-600">
-            {MOCK_PA_REQUESTS.filter((r) => r.status === "approved").length}
+            {statusCounts.approved || 0}
           </div>
+          <p className="text-xs text-gray-500">Authorized procedures</p>
         </div>
       </div>
     </div>

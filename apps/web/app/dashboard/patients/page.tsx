@@ -1,90 +1,50 @@
-/**
- * ⚠️  READ/UPDATE STATUS.md BEFORE & AFTER CHANGES
- * Component: Patient Management | Status: [Check STATUS.md] | Modified: 2025-10-17
- */
-
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { apiGet, ApiResponse } from "@web/lib/api";
+import type { PatientRow } from "@web/types/api";
 
-// Mock data for demo
-const MOCK_PATIENTS = [
-  {
-    id: "patient-001",
-    name: "Smith, John",
-    dob: "01/15/1975",
-    gender: "M",
-    memberId: "BC123456789",
-    payer: "Blue Cross Blue Shield",
-    phone: "(555) 123-4567",
-    email: "john.smith@email.com",
-    lastVisit: "2025-10-15",
-    activePAs: 1,
-    totalPAs: 3,
-  },
-  {
-    id: "patient-002",
-    name: "Doe, Jane",
-    dob: "05/22/1982",
-    gender: "F",
-    memberId: "AET987654321",
-    payer: "Aetna",
-    phone: "(555) 234-5678",
-    email: "jane.doe@email.com",
-    lastVisit: "2025-10-14",
-    activePAs: 2,
-    totalPAs: 5,
-  },
-  {
-    id: "patient-003",
-    name: "Johnson, Mary",
-    dob: "11/08/1968",
-    gender: "F",
-    memberId: "UHC111222333",
-    payer: "United Healthcare",
-    phone: "(555) 345-6789",
-    email: "mary.j@email.com",
-    lastVisit: "2025-10-08",
-    activePAs: 0,
-    totalPAs: 8,
-  },
-  {
-    id: "patient-004",
-    name: "Williams, Robert",
-    dob: "03/30/1990",
-    gender: "M",
-    memberId: "CIG444555666",
-    payer: "Cigna",
-    phone: "(555) 456-7890",
-    email: "rwilliams@email.com",
-    lastVisit: "2025-10-12",
-    activePAs: 1,
-    totalPAs: 2,
-  },
-];
+function formatDate(value: string | null) {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString();
+}
 
 export default function PatientsPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredPatients = MOCK_PATIENTS.filter((patient) => {
-    const query = searchQuery.toLowerCase();
-    return (
-      searchQuery === "" ||
-      patient.name.toLowerCase().includes(query) ||
-      patient.memberId.toLowerCase().includes(query) ||
-      patient.payer.toLowerCase().includes(query)
-    );
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ["patients"],
+    queryFn: async () => {
+      const response = await apiGet<ApiResponse<PatientRow[]>>("/api/patients");
+      if (!response.success) {
+        throw new Error(response.error || "Failed to load patients");
+      }
+      return response.data ?? [];
+    },
   });
+
+  const patients = data ?? [];
+
+  const filteredPatients = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    if (!query) return patients;
+    return patients.filter((patient) => {
+      return (
+        patient.name.toLowerCase().includes(query) ||
+        (patient.mrn ?? "").toLowerCase().includes(query) ||
+        (patient.phone ?? "").toLowerCase().includes(query)
+      );
+    });
+  }, [patients, searchQuery]);
 
   return (
     <div className="px-4 sm:px-0">
-      {/* Header */}
       <div className="sm:flex sm:items-center sm:justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Patients</h1>
           <p className="mt-1 text-sm text-gray-500">
-            View and manage patient records
+            Patient roster for the current organization
           </p>
         </div>
         <div className="mt-4 sm:mt-0">
@@ -94,148 +54,116 @@ export default function PatientsPage() {
         </div>
       </div>
 
-      {/* Search */}
       <div className="bg-white rounded-lg shadow mb-6 p-4">
-        <div className="max-w-md">
-          <label
-            htmlFor="patient-search"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Search Patients
-          </label>
-          <input
-            type="text"
-            id="patient-search"
-            placeholder="Name, Member ID, or Payer..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
+        <label
+          htmlFor="patient-search"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          Search
+        </label>
+        <input
+          type="text"
+          id="patient-search"
+          placeholder="Name, MRN, or phone number"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+        />
       </div>
 
-      {/* Patients Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Patient
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                DOB / Gender
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Member ID
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Payer
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Contact
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Last Visit
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                PAs
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {filteredPatients.length === 0 ? (
+        {isLoading ? (
+          <div className="py-12 text-center text-gray-500">Loading patients…</div>
+        ) : isError ? (
+          <div className="py-12 text-center text-red-600">
+            {(error as Error)?.message || "Failed to load patients"}
+            <div className="mt-2">
+              <button
+                onClick={() => refetch()}
+                className="text-blue-600 hover:text-blue-800 text-sm"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        ) : (
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
               <tr>
-                <td
-                  colSpan={8}
-                  className="px-6 py-12 text-center text-gray-500"
-                >
-                  No patients found
-                </td>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  MRN
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date of Birth
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Sex
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Contact
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Address
+                </th>
               </tr>
-            ) : (
-              filteredPatients.map((patient) => (
-                <tr
-                  key={patient.id}
-                  className="hover:bg-gray-50 cursor-pointer"
-                  onClick={() =>
-                    (window.location.href = `/dashboard/patients/${patient.id}`)
-                  }
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {patient.name}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {patient.dob} / {patient.gender}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {patient.memberId}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {patient.payer}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <div>{patient.phone}</div>
-                    <div className="text-xs">{patient.email}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {patient.lastVisit}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      Active: {patient.activePAs}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      Total: {patient.totalPAs}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Link
-                      href={`/dashboard/patients/${patient.id}`}
-                      className="text-blue-600 hover:text-blue-900"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      View
-                    </Link>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredPatients.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="px-6 py-12 text-center text-gray-500"
+                  >
+                    No patients found
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                filteredPatients.map((patient) => (
+                  <tr key={patient.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {patient.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {patient.mrn || "—"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDate(patient.dob)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {patient.sex || "—"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <div>{patient.phone || "—"}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {patient.address || "—"}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
 
-      {/* Summary Stats */}
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-sm text-gray-500">Total Patients</div>
+          <div className="text-2xl font-bold text-gray-900">{patients.length}</div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="text-sm text-gray-500">With MRN</div>
           <div className="text-2xl font-bold text-gray-900">
-            {MOCK_PATIENTS.length}
+            {patients.filter((p) => Boolean(p.mrn)).length}
           </div>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-sm text-gray-500">Active PAs</div>
-          <div className="text-2xl font-bold text-blue-600">
-            {MOCK_PATIENTS.reduce((sum, p) => sum + p.activePAs, 0)}
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-sm text-gray-500">Total PAs</div>
-          <div className="text-2xl font-bold text-gray-600">
-            {MOCK_PATIENTS.reduce((sum, p) => sum + p.totalPAs, 0)}
-          </div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-sm text-gray-500">Avg PAs per Patient</div>
+          <div className="text-sm text-gray-500">With Contact Info</div>
           <div className="text-2xl font-bold text-gray-900">
-            {(
-              MOCK_PATIENTS.reduce((sum, p) => sum + p.totalPAs, 0) /
-              MOCK_PATIENTS.length
-            ).toFixed(1)}
+            {patients.filter((p) => p.phone || p.address).length}
           </div>
         </div>
       </div>

@@ -5,6 +5,7 @@
 
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@greenlight/db";
+import { HttpError, requireUser, resolveOrgId } from "../_lib/org";
 
 /**
  * GET /api/metrics
@@ -17,16 +18,11 @@ import { supabaseAdmin } from "@greenlight/db";
  */
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const orgId = searchParams.get("org_id");
-    const timeRange = searchParams.get("time_range") || "30d";
+    await requireUser();
 
-    if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: "org_id is required" },
-        { status: 400 }
-      );
-    }
+    const { searchParams } = new URL(request.url);
+    const orgId = await resolveOrgId(searchParams.get("org_id"));
+    const timeRange = searchParams.get("time_range") || "30d";
 
     // Calculate date range
     const now = new Date();
@@ -167,6 +163,13 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
+    if (error instanceof HttpError) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: error.status }
+      );
+    }
+
     console.error("[API] Metrics error:", error);
     return NextResponse.json(
       {

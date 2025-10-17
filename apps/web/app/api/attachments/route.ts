@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase, getCurrentUser } from "@greenlight/db";
 import type { Database } from "@greenlight/db";
 import crypto from "crypto";
+import { HttpError, resolveOrgId } from "../_lib/org";
 
 /**
  * POST /api/attachments
@@ -160,14 +161,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const orgId = searchParams.get("org_id");
-
-    if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: "Missing org_id parameter" },
-        { status: 400 }
-      );
-    }
+    const orgId = await resolveOrgId(searchParams.get("org_id"));
 
     // RLS will automatically filter to user's org
     const { data, error } = await supabase
@@ -185,6 +179,13 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
+    if (error instanceof HttpError) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: error.status }
+      );
+    }
+
     console.error("Attachment list error:", error);
     return NextResponse.json(
       {

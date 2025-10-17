@@ -4,8 +4,13 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser, getOrdersByOrg, createOrder } from "@greenlight/db";
+import { getOrdersByOrg, createOrder } from "@greenlight/db";
 import type { Database } from "@greenlight/db/types/database";
+import {
+  HttpError,
+  requireUser,
+  resolveOrgId,
+} from "../_lib/org";
 
 type OrderInsert = Database["public"]["Tables"]["order"]["Insert"];
 
@@ -15,23 +20,9 @@ type OrderInsert = Database["public"]["Tables"]["order"]["Insert"];
  */
 export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
     const { searchParams } = new URL(request.url);
-    const orgId = searchParams.get("org_id");
-
-    if (!orgId) {
-      return NextResponse.json(
-        { success: false, error: "Missing org_id parameter" },
-        { status: 400 }
-      );
-    }
+    await requireUser();
+    const orgId = await resolveOrgId(searchParams.get("org_id"));
 
     const result = await getOrdersByOrg(orgId);
 
@@ -44,6 +35,13 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, data: result.data });
   } catch (error) {
+    if (error instanceof HttpError) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: error.status }
+      );
+    }
+
     console.error("Order list error:", error);
     return NextResponse.json(
       {
@@ -72,13 +70,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    await requireUser();
 
     const body = await request.json();
     const {
@@ -91,8 +83,9 @@ export async function POST(request: NextRequest) {
       clinic_notes_text,
     } = body;
 
+    const orgId = await resolveOrgId(org_id);
+
     if (
-      !org_id ||
       !patient_id ||
       !provider_id ||
       !modality ||
@@ -118,7 +111,7 @@ export async function POST(request: NextRequest) {
     }
 
     const order: OrderInsert = {
-      org_id,
+      org_id: orgId,
       patient_id,
       provider_id,
       modality,
@@ -141,6 +134,13 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
+    if (error instanceof HttpError) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: error.status }
+      );
+    }
+
     console.error("Order creation error:", error);
     return NextResponse.json(
       {

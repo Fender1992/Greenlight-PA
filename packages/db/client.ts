@@ -12,28 +12,39 @@ let _supabaseAdmin: ReturnType<typeof createClient<Database>> | null = null;
 
 /**
  * Get Supabase URL with validation
+ * Client-side: Uses NEXT_PUBLIC_SUPABASE_URL
+ * Server-side: Falls back to NEXT_SUPABASE_URL
  */
 function getSupabaseUrl(): string {
-  const url = process.env.NEXT_SUPABASE_URL;
+  const url =
+    process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_SUPABASE_URL;
   if (!url) {
-    throw new Error("Missing environment variable: NEXT_SUPABASE_URL");
+    throw new Error(
+      "Missing environment variable: NEXT_PUBLIC_SUPABASE_URL or NEXT_SUPABASE_URL"
+    );
   }
   return url;
 }
 
 /**
  * Get Supabase anon key with validation
+ * Client-side: Uses NEXT_PUBLIC_SUPABASE_ANON_KEY
+ * Server-side: Falls back to NEXT_SUPABASE_ANON_KEY
  */
 function getSupabaseAnonKey(): string {
-  const key = process.env.NEXT_SUPABASE_ANON_KEY;
+  const key =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.NEXT_SUPABASE_ANON_KEY;
   if (!key) {
-    throw new Error("Missing environment variable: NEXT_SUPABASE_ANON_KEY");
+    throw new Error(
+      "Missing environment variable: NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_SUPABASE_ANON_KEY"
+    );
   }
   return key;
 }
 
 /**
- * Get Supabase service role key with validation
+ * Get Supabase service role key with validation (server-side only)
  */
 function getSupabaseServiceKey(): string {
   const key = process.env.NEXT_SUPABASE_ROLE_KEY;
@@ -44,7 +55,7 @@ function getSupabaseServiceKey(): string {
 }
 
 /**
- * Get Supabase JWT secret with validation
+ * Get Supabase JWT secret with validation (server-side only)
  */
 function getSupabaseJwtSecret(): string {
   const secret = process.env.NEXT_SUPABASE_JWT_SECRET;
