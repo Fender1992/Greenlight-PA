@@ -83,6 +83,13 @@ export async function POST(request: NextRequest) {
 
     const paRequestRow = paRequest as PaRequestRow;
 
+    if (!paRequestRow.payer_id) {
+      return NextResponse.json(
+        { success: false, error: "PA request missing payer information" },
+        { status: 400 }
+      );
+    }
+
     const [orderResult, payerResult] = await Promise.all([
       supabase
         .from("order")
@@ -127,12 +134,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch relevant policy snippets for criteria
-    const { data: policySnippets } = await supabase
+    let snippetsQuery = supabase
       .from("policy_snippet")
       .select("snippet_text")
-      .eq("payer_id", payer.id)
-      .ilike("modality", `%${order.modality}%`)
-      .limit(5);
+      .eq("payer_id", payer.id);
+
+    if (order.modality) {
+      snippetsQuery = snippetsQuery.ilike("modality", `%${order.modality}%`);
+    }
+
+    const { data: policySnippets } = await snippetsQuery.limit(5);
 
     // Calculate patient age if DOB available
     let age: number | undefined;
@@ -150,11 +161,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Prepare input for LLM
-    const input: MedicalNecessityInput = {
-      patient_demographics: {
-        age,
-        sex: patient.sex,
-      },
+      const input: MedicalNecessityInput = {
+        patient_demographics: {
+          age,
+          sex: patient.sex ?? undefined,
+        },
       modality: order.modality,
       cpt_codes: order.cpt_codes ?? [],
       icd10_codes: order.icd10_codes ?? [],

@@ -289,7 +289,7 @@ export function detectPolicyChanges(
   const oldCPT = new Set(oldPolicy.cptCodes);
   const newCPT = new Set(newPolicy.cptCodes);
 
-  for (const code of newCPT) {
+  for (const code of Array.from(newCPT)) {
     if (!oldCPT.has(code)) {
       changes.push({
         field: "cptCodes",
@@ -299,7 +299,7 @@ export function detectPolicyChanges(
     }
   }
 
-  for (const code of oldCPT) {
+  for (const code of Array.from(oldCPT)) {
     if (!newCPT.has(code)) {
       changes.push({
         field: "cptCodes",

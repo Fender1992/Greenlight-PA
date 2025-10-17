@@ -81,6 +81,13 @@ export async function POST(request: NextRequest) {
 
     const paRequestRow = paRequest as PaRequestRow;
 
+    if (!paRequestRow.payer_id) {
+      return NextResponse.json(
+        { success: false, error: "PA request missing payer information" },
+        { status: 400 }
+      );
+    }
+
     const [orderResult, payerResult] = await Promise.all([
       supabase
         .from("order")
@@ -111,12 +118,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch relevant policy snippets
-    const { data: policySnippets } = await supabase
+    let snippetsQuery = supabase
       .from("policy_snippet")
       .select("snippet_text")
-      .eq("payer_id", payer.id)
-      .ilike("modality", `%${order.modality}%`)
-      .limit(3);
+      .eq("payer_id", payer.id);
+
+    if (order.modality) {
+      snippetsQuery = snippetsQuery.ilike("modality", `%${order.modality}%`);
+    }
+
+    const { data: policySnippets } = await snippetsQuery.limit(3);
 
     // Prepare input for LLM
     const input: ChecklistGenerationInput = {

@@ -47,8 +47,8 @@ describe("Orders API", () => {
       vi.mocked(getOrdersByOrg).mockResolvedValue({
         success: true,
         data: [
-          { id: "order-1", modality: "MRI Brain" },
-          { id: "order-2", modality: "CT Chest" },
+          { id: "order-1", modality: "MRI Brain" } as any,
+          { id: "order-2", modality: "CT Chest" } as any,
         ],
         error: null,
       });

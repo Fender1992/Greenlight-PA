@@ -63,6 +63,13 @@ export async function POST(request: NextRequest) {
 
     const paRequestRow = paRequest as PaRequestRow;
 
+    if (!paRequestRow.payer_id) {
+      return NextResponse.json(
+        { success: false, error: "PA request missing payer information" },
+        { status: 400 }
+      );
+    }
+
     const [orderResult, payerResult, orgResult] = await Promise.all([
       supabase
         .from("order")
@@ -184,7 +191,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return new NextResponse(result.buffer, {
+    const pdfArrayBuffer = new ArrayBuffer(result.buffer.byteLength);
+    new Uint8Array(pdfArrayBuffer).set(result.buffer);
+
+    const pdfBlob = new Blob([pdfArrayBuffer], {
+      type: "application/pdf",
+    });
+
+    return new NextResponse(pdfBlob, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",

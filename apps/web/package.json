@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "vitest",
+    "test": "VITEST_POOL=forks vitest",
     "test:e2e": "playwright test"
   },
   "dependencies": {

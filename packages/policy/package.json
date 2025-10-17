@@ -6,7 +6,7 @@
   "types": "./index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "VITEST_POOL=forks vitest run"
   },
   "dependencies": {
     "cheerio": "^1.0.0",
