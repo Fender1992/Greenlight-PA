@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
     const storagePath = `${orgId}/attachments/${date}/${sha256}-${file.name}`;
 
     // Upload to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from("attachments")
       .upload(storagePath, buffer, {
         contentType: file.type,

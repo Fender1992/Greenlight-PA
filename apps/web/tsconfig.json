@@ -23,7 +23,17 @@
       "@llm/*": ["../../packages/llm/*"],
       "@pdfkit/*": ["../../packages/pdfkit/*"],
       "@ocr/*": ["../../packages/ocr/*"],
-      "@policy/*": ["../../packages/policy/*"]
+      "@policy/*": ["../../packages/policy/*"],
+      "@greenlight/db": ["../../packages/db"],
+      "@greenlight/db/*": ["../../packages/db/*"],
+      "@greenlight/llm": ["../../packages/llm"],
+      "@greenlight/llm/*": ["../../packages/llm/*"],
+      "@greenlight/pdfkit": ["../../packages/pdfkit"],
+      "@greenlight/pdfkit/*": ["../../packages/pdfkit/*"],
+      "@greenlight/ocr": ["../../packages/ocr"],
+      "@greenlight/ocr/*": ["../../packages/ocr/*"],
+      "@greenlight/policy": ["../../packages/policy"],
+      "@greenlight/policy/*": ["../../packages/policy/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

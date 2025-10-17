@@ -43,6 +43,7 @@ export interface Database {
           address?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       member: {
         Row: {
@@ -66,6 +67,7 @@ export interface Database {
           role?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       patient: {
         Row: {
@@ -101,6 +103,7 @@ export interface Database {
           address?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       payer: {
         Row: {
@@ -127,6 +130,7 @@ export interface Database {
           policy_links?: string[];
           created_at?: string;
         };
+        Relationships: [];
       };
       coverage: {
         Row: {
@@ -165,6 +169,7 @@ export interface Database {
           raw_json?: Json | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       provider: {
         Row: {
@@ -194,6 +199,7 @@ export interface Database {
           location?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       order: {
         Row: {
@@ -229,6 +235,7 @@ export interface Database {
           clinic_notes_text?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       pa_request: {
         Row: {
@@ -264,6 +271,7 @@ export interface Database {
           submitted_at?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       pa_checklist_item: {
         Row: {
@@ -296,6 +304,7 @@ export interface Database {
           evidence_attachment_id?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       pa_summary: {
         Row: {
@@ -328,6 +337,7 @@ export interface Database {
           version?: number;
           created_at?: string;
         };
+        Relationships: [];
       };
       attachment: {
         Row: {
@@ -360,6 +370,7 @@ export interface Database {
           uploaded_by?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       status_event: {
         Row: {
@@ -386,6 +397,7 @@ export interface Database {
           actor?: string | null;
           at?: string;
         };
+        Relationships: [];
       };
       policy_snippet: {
         Row: {
@@ -415,6 +427,7 @@ export interface Database {
           source_url?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       audit_log: {
         Row: {
@@ -447,6 +460,7 @@ export interface Database {
           meta_json?: Json | null;
           at?: string;
         };
+        Relationships: [];
       };
     };
     Views: {};

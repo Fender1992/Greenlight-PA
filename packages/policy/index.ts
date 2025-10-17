@@ -3,5 +3,35 @@
  * Package: @greenlight/policy | Status: [Check STATUS.md] | Modified: 2025-10-17
  */
 
-// Placeholder - will be implemented in Section 6
-export {};
+// Types
+export type {
+  PolicyDocument,
+  PolicyContent,
+  PolicySection,
+  PolicyRequirement,
+  ApprovalCriteria,
+  ScraperConfig,
+  ScraperResult,
+  RawPolicy,
+  NormalizationOptions,
+  NormalizationResult,
+  IngestionJob,
+  IngestionResult,
+  PolicySnippet,
+  PolicyChange,
+  PolicyDiff,
+} from "./types";
+
+// Scraper
+export { scrapePolicies, RateLimiter } from "./scraper";
+
+// Normalizer
+export { normalizePolicy, validatePolicy } from "./normalizer";
+
+// Ingestion
+export {
+  ingestPoliciesForPayer,
+  storePolicySnippets,
+  updatePolicySnippets,
+  detectPolicyChanges,
+} from "./ingestion";
