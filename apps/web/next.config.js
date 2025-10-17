@@ -22,6 +22,23 @@ const nextConfig = {
       "@pdfkit": require("path").resolve(__dirname, "../../packages/pdfkit"),
       "@ocr": require("path").resolve(__dirname, "../../packages/ocr"),
       "@policy": require("path").resolve(__dirname, "../../packages/policy"),
+      "@greenlight/db": require("path").resolve(__dirname, "../../packages/db"),
+      "@greenlight/llm": require("path").resolve(
+        __dirname,
+        "../../packages/llm"
+      ),
+      "@greenlight/pdfkit": require("path").resolve(
+        __dirname,
+        "../../packages/pdfkit"
+      ),
+      "@greenlight/ocr": require("path").resolve(
+        __dirname,
+        "../../packages/ocr"
+      ),
+      "@greenlight/policy": require("path").resolve(
+        __dirname,
+        "../../packages/policy"
+      ),
     };
     return config;
   },
