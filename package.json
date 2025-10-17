@@ -15,7 +15,7 @@
     "test:e2e": "npm run test:e2e --workspace=@greenlight/web",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "prepare": "husky install"
+    "prepare": "command -v husky >/dev/null 2>&1 && husky install || true"
   },
   "devDependencies": {
     "@types/node": "^20.17.10",

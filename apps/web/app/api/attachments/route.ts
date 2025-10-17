@@ -1,0 +1,201 @@
+/**
+ * ⚠️  READ/UPDATE STATUS.md BEFORE & AFTER CHANGES
+ * API Route: Attachments Upload | Status: [Check STATUS.md] | Modified: 2025-10-17
+ */
+
+import { NextRequest, NextResponse } from "next/server";
+import { supabase, getCurrentUser } from "@greenlight/db";
+import crypto from "crypto";
+
+/**
+ * POST /api/attachments
+ * Upload attachment with multipart form data
+ *
+ * Body:
+ * - file: File (required)
+ * - org_id: string (required)
+ * - type: attachment_type (required)
+ *
+ * Returns:
+ * - { success: true, data: { id, storage_path, sha256 } }
+ * - { success: false, error: string }
+ */
+export async function POST(request: NextRequest) {
+  try {
+    // Check authentication
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    // Parse multipart form data
+    const formData = await request.formData();
+    const file = formData.get("file") as File | null;
+    const orgId = formData.get("org_id") as string | null;
+    const type = formData.get("type") as string | null;
+
+    if (!file || !orgId || !type) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Missing required fields: file, org_id, type",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate file size (max 50MB)
+    const MAX_FILE_SIZE = 50 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { success: false, error: "File size exceeds 50MB limit" },
+        { status: 400 }
+      );
+    }
+
+    // Validate attachment type
+    const validTypes = [
+      "order",
+      "imaging",
+      "lab",
+      "notes",
+      "payer_form",
+      "appeal",
+      "other",
+    ];
+    if (!validTypes.includes(type)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Invalid type. Must be one of: ${validTypes.join(", ")}`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Read file buffer
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Calculate SHA256 hash
+    const sha256 = crypto.createHash("sha256").update(buffer).digest("hex");
+
+    // Generate storage path: org_id/attachments/yyyy-mm-dd/sha256-filename
+    const date = new Date().toISOString().split("T")[0];
+    const storagePath = `${orgId}/attachments/${date}/${sha256}-${file.name}`;
+
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from("attachments")
+      .upload(storagePath, buffer, {
+        contentType: file.type,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error("Supabase storage upload error:", uploadError);
+      return NextResponse.json(
+        { success: false, error: `Upload failed: ${uploadError.message}` },
+        { status: 500 }
+      );
+    }
+
+    // Create attachment record in database
+    const { data: attachmentData, error: dbError } = await supabase
+      .from("attachment")
+      .insert({
+        org_id: orgId,
+        storage_path: storagePath,
+        type: type as any,
+        sha256,
+        uploaded_by: user.id,
+      })
+      .select()
+      .single();
+
+    if (dbError) {
+      console.error("Database insert error:", dbError);
+      // Clean up uploaded file
+      await supabase.storage.from("attachments").remove([storagePath]);
+      return NextResponse.json(
+        { success: false, error: `Database error: ${dbError.message}` },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: attachmentData.id,
+        storage_path: attachmentData.storage_path,
+        sha256: attachmentData.sha256,
+        type: attachmentData.type,
+        uploaded_by: attachmentData.uploaded_by,
+        created_at: attachmentData.created_at,
+      },
+    });
+  } catch (error) {
+    console.error("Attachment upload error:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Internal server error",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * GET /api/attachments?org_id=xxx
+ * List attachments for an organization
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const orgId = searchParams.get("org_id");
+
+    if (!orgId) {
+      return NextResponse.json(
+        { success: false, error: "Missing org_id parameter" },
+        { status: 400 }
+      );
+    }
+
+    // RLS will automatically filter to user's org
+    const { data, error } = await supabase
+      .from("attachment")
+      .select("*")
+      .eq("org_id", orgId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true, data });
+  } catch (error) {
+    console.error("Attachment list error:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Internal server error",
+      },
+      { status: 500 }
+    );
+  }
+}
