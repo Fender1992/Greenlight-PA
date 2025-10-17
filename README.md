@@ -87,10 +87,11 @@ NEXT_PUBLIC_DEMO_MODE=true
 ENABLE_LLM=false
 ENABLE_OCR=false
 
-# Supabase (get from https://supabase.com/dashboard)
-NEXT_PUBLIC_SUPABASE_URL=your-project-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+# Supabase (server-only, from https://supabase.com/dashboard)
+NEXT_SUPABASE_URL=your-project-url
+NEXT_SUPABASE_ANON_KEY=your-anon-key
+NEXT_SUPABASE_ROLE_KEY=your-service-role-key
+NEXT_SUPABASE_JWT_SECRET=your-jwt-secret
 
 # Optional: Anthropic API (for LLM features)
 ANTHROPIC_API_KEY=sk-ant-...
@@ -211,9 +212,10 @@ vercel --prod
 
 Add these in Vercel Dashboard → Settings → Environment Variables:
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
+- `NEXT_SUPABASE_URL`
+- `NEXT_SUPABASE_ANON_KEY`
+- `NEXT_SUPABASE_ROLE_KEY`
+- `NEXT_SUPABASE_JWT_SECRET`
 - `ANTHROPIC_API_KEY` (if using LLM features)
 - `NEXT_PUBLIC_DEMO_MODE=false` (for production)
 
