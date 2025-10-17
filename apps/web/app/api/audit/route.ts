@@ -31,10 +31,7 @@ export async function GET(request: Request) {
     const subject = searchParams.get("subject");
     const startDate = searchParams.get("start_date");
     const endDate = searchParams.get("end_date");
-    const limit = Math.min(
-      parseInt(searchParams.get("limit") || "100"),
-      1000
-    );
+    const limit = Math.min(parseInt(searchParams.get("limit") || "100"), 1000);
     const offset = parseInt(searchParams.get("offset") || "0");
 
     // Build query
@@ -96,7 +93,8 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Failed to fetch audit logs",
+        error:
+          error instanceof Error ? error.message : "Failed to fetch audit logs",
       },
       { status: 500 }
     );

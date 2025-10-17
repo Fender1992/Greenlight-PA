@@ -161,11 +161,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Prepare input for LLM
-      const input: MedicalNecessityInput = {
-        patient_demographics: {
-          age,
-          sex: patient.sex ?? undefined,
-        },
+    const input: MedicalNecessityInput = {
+      patient_demographics: {
+        age,
+        sex: patient.sex ?? undefined,
+      },
       modality: order.modality,
       cpt_codes: order.cpt_codes ?? [],
       icd10_codes: order.icd10_codes ?? [],

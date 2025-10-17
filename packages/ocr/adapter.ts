@@ -47,7 +47,7 @@ export class MockOCRAdapter implements OCRAdapter {
 export class TextractOCRAdapter implements OCRAdapter {
   name = "textract";
 
-  async extractText(buffer: Buffer, mimeType: string): Promise<OCRResult> {
+  async extractText(_buffer: Buffer, _mimeType: string): Promise<OCRResult> {
     // TODO: Implement AWS Textract integration
     // This would:
     // 1. Upload document to Textract
@@ -65,7 +65,7 @@ export class TextractOCRAdapter implements OCRAdapter {
 export class DocumentAIOCRAdapter implements OCRAdapter {
   name = "documentai";
 
-  async extractText(buffer: Buffer, mimeType: string): Promise<OCRResult> {
+  async extractText(_buffer: Buffer, _mimeType: string): Promise<OCRResult> {
     // TODO: Implement Google Cloud Document AI integration
     throw new Error("Document AI OCR adapter not yet implemented");
   }

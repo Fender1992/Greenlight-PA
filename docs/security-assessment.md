@@ -13,6 +13,7 @@ This document provides a comprehensive security assessment of the Greenlight PA 
 **Overall Security Posture:** ✅ Strong (Demo/Development Mode)
 
 **Key Strengths:**
+
 - Row Level Security (RLS) enforced at database level
 - Multi-tenant data isolation
 - Comprehensive audit logging
@@ -20,6 +21,7 @@ This document provides a comprehensive security assessment of the Greenlight PA 
 - Type-safe codebase with strict TypeScript
 
 **Areas for Production Hardening:**
+
 - Authentication integration (Supabase Auth)
 - PHI encryption at rest and in transit
 - HIPAA compliance implementation
@@ -103,11 +105,13 @@ This document provides a comprehensive security assessment of the Greenlight PA 
 ### 1. Authentication & Authorization
 
 #### Current Implementation (Demo Mode)
+
 - ✅ Placeholder authentication ("Demo User")
 - ✅ Row Level Security policies enforced
 - ⚠️ No actual user authentication
 
 #### Production Requirements
+
 - ❌ Supabase Auth integration
 - ❌ Multi-factor authentication (MFA)
 - ❌ Role-based access control (RBAC)
@@ -118,7 +122,7 @@ This document provides a comprehensive security assessment of the Greenlight PA 
 
 ```typescript
 // packages/db/auth.ts
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
 export async function getCurrentUser() {
   const supabase = createClient(
@@ -126,10 +130,13 @@ export async function getCurrentUser() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  const { data: { user }, error } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
 
   if (error || !user) {
-    throw new Error('User not authenticated');
+    throw new Error("User not authenticated");
   }
 
   return user;
@@ -145,7 +152,7 @@ export async function requireOrgAccess(orgId: string) {
   const orgs = await getUserOrgIds(user.id);
 
   if (!orgs.includes(orgId)) {
-    throw new Error('User does not have access to this organization');
+    throw new Error("User does not have access to this organization");
   }
 
   return user;
@@ -171,6 +178,7 @@ USING (org_id IN (SELECT get_user_org_ids()));
 ```
 
 **Protected Tables:**
+
 - ✅ organizations
 - ✅ org_member
 - ✅ patient
@@ -184,6 +192,7 @@ USING (org_id IN (SELECT get_user_org_ids()));
 - ✅ audit_log
 
 **Shared Tables (No RLS):**
+
 - ✅ payer (reference data)
 - ✅ policy_snippet (reference data)
 
@@ -192,11 +201,13 @@ USING (org_id IN (SELECT get_user_org_ids()));
 #### Encryption
 
 **Current State:**
+
 - ✅ TLS in transit (Supabase + Vercel HTTPS)
 - ⚠️ No encryption at rest (Supabase free tier)
 - ❌ No column-level encryption
 
 **Production Requirements:**
+
 - Supabase Pro tier with encryption at rest
 - Consider column-level encryption for:
   - patient.name
@@ -227,11 +238,13 @@ FROM patient;
 #### PHI Handling
 
 **Current State (Demo Mode):**
+
 - ✅ No real PHI (all demo data)
 - ✅ De-identified patient data
 - ✅ No SSN or full DOB
 
 **Production Requirements:**
+
 - Implement HIPAA-compliant PHI handling
 - Minimum necessary principle
 - PHI access logging (audit_log)
@@ -245,6 +258,7 @@ FROM patient;
 #### Input Validation
 
 **Current State:**
+
 - ⚠️ Basic validation (TypeScript types)
 - ❌ No request body schema validation
 - ❌ No rate limiting
@@ -253,13 +267,13 @@ FROM patient;
 
 ```typescript
 // API route with validation
-import { z } from 'zod';
+import { z } from "zod";
 
 const CreatePARequestSchema = z.object({
   patient_id: z.string().uuid(),
   order_id: z.string().uuid(),
   payer_id: z.string().uuid(),
-  priority: z.enum(['standard', 'urgent']),
+  priority: z.enum(["standard", "urgent"]),
 });
 
 export async function POST(request: Request) {
@@ -270,7 +284,7 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Validation failed', details: error.errors },
+        { error: "Validation failed", details: error.errors },
         { status: 400 }
       );
     }
@@ -284,31 +298,32 @@ export async function POST(request: Request) {
 #### Rate Limiting
 
 **Current State:**
+
 - ❌ No rate limiting
 
 **Production Requirements:**
 
 ```typescript
 // middleware.ts
-import { Ratelimit } from '@upstash/ratelimit';
-import { Redis } from '@upstash/redis';
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
 const ratelimit = new Ratelimit({
   redis: Redis.fromEnv(),
-  limiter: Ratelimit.slidingWindow(100, '1 m'),
+  limiter: Ratelimit.slidingWindow(100, "1 m"),
 });
 
 export async function middleware(request: NextRequest) {
-  const ip = request.ip ?? '127.0.0.1';
+  const ip = request.ip ?? "127.0.0.1";
   const { success, limit, reset, remaining } = await ratelimit.limit(ip);
 
   if (!success) {
-    return new NextResponse('Rate limit exceeded', {
+    return new NextResponse("Rate limit exceeded", {
       status: 429,
       headers: {
-        'X-RateLimit-Limit': limit.toString(),
-        'X-RateLimit-Remaining': remaining.toString(),
-        'X-RateLimit-Reset': reset.toString(),
+        "X-RateLimit-Limit": limit.toString(),
+        "X-RateLimit-Remaining": remaining.toString(),
+        "X-RateLimit-Reset": reset.toString(),
       },
     });
   }
@@ -322,9 +337,11 @@ export async function middleware(request: NextRequest) {
 #### CORS Configuration
 
 **Current State:**
+
 - ✅ Next.js default CORS (same-origin)
 
 **Production Checklist:**
+
 - [ ] Define allowed origins
 - [ ] Configure CORS headers
 - [ ] Implement preflight handling
@@ -341,20 +358,21 @@ All critical actions are logged to `audit_log` table:
 
 ```typescript
 // Example audit log entry
-await supabaseAdmin.from('audit_log').insert({
+await supabaseAdmin.from("audit_log").insert({
   org_id: pa.org_id,
   user_id: user.id,
-  action: 'pa_request.submitted',
-  subject: 'pa_request',
+  action: "pa_request.submitted",
+  subject: "pa_request",
   subject_id: paId,
   meta_json: {
-    status: 'submitted',
+    status: "submitted",
     priority: pa.priority,
   },
 });
 ```
 
 **Logged Actions:**
+
 - PA request creation, update, deletion, submission
 - Attachment uploads and deletions
 - User authentication events (TODO)
@@ -366,9 +384,11 @@ await supabaseAdmin.from('audit_log').insert({
 #### Log Retention
 
 **Current State:**
+
 - ⚠️ Indefinite retention (no cleanup job)
 
 **Production Requirements:**
+
 - Define retention period (7 years for HIPAA)
 - Implement log archival
 - Secure log deletion after retention
@@ -380,12 +400,14 @@ await supabaseAdmin.from('audit_log').insert({
 #### Vulnerability Scanning
 
 **Current State:**
+
 ```bash
 npm audit
 # 6 vulnerabilities (5 moderate, 1 critical)
 ```
 
 **Production Requirements:**
+
 - [ ] Address all critical vulnerabilities
 - [ ] Implement automated vulnerability scanning (Dependabot)
 - [ ] Regular dependency updates
@@ -396,11 +418,13 @@ npm audit
 #### Supply Chain Security
 
 **Current State:**
+
 - ✅ package-lock.json for reproducible builds
 - ❌ No dependency signing verification
 - ❌ No SBOM (Software Bill of Materials)
 
 **Production Requirements:**
+
 - Use `npm ci` for reproducible installs
 - Enable npm audit in CI/CD
 - Consider using Snyk or similar tools
@@ -412,6 +436,7 @@ npm audit
 #### Environment Variables
 
 **Current State:**
+
 - ✅ .env.example provided
 - ⚠️ No environment variable validation at runtime
 
@@ -419,14 +444,14 @@ npm audit
 
 ```typescript
 // lib/env.ts
-import { z } from 'zod';
+import { z } from "zod";
 
 const envSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
-  NODE_ENV: z.enum(['development', 'production', 'test']),
+  NODE_ENV: z.enum(["development", "production", "test"]),
 });
 
 export const env = envSchema.parse(process.env);
@@ -437,10 +462,12 @@ export const env = envSchema.parse(process.env);
 #### Secrets Management
 
 **Current State:**
+
 - ⚠️ Secrets in .env files (not committed)
 - ❌ No secrets rotation
 
 **Production Requirements:**
+
 - Use Vercel Environment Variables
 - Implement secrets rotation policy
 - Consider HashiCorp Vault for sensitive keys
@@ -452,6 +479,7 @@ export const env = envSchema.parse(process.env);
 **Platform:** Vercel + Supabase
 
 **Security Checklist:**
+
 - [ ] Enable Vercel authentication protection
 - [ ] Configure Supabase IP allowlist
 - [ ] Enable Supabase database backups
@@ -466,23 +494,23 @@ module.exports = {
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source: "/(.*)",
         headers: [
           {
-            key: 'X-Frame-Options',
-            value: 'DENY',
+            key: "X-Frame-Options",
+            value: "DENY",
           },
           {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
+            key: "X-Content-Type-Options",
+            value: "nosniff",
           },
           {
-            key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin',
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
           },
           {
-            key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()',
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
           },
         ],
       },
@@ -502,6 +530,7 @@ module.exports = {
 **Status:** ⚠️ Partial (Demo Mode)
 
 #### Administrative Safeguards
+
 - [ ] Security Management Process
 - [ ] Assigned Security Responsibility
 - [ ] Workforce Security
@@ -512,11 +541,13 @@ module.exports = {
 - [ ] Business Associate Agreements
 
 #### Physical Safeguards
+
 - ✅ Facility Access Controls (Cloud provider)
 - ✅ Workstation Use (Cloud provider)
 - ✅ Device and Media Controls (Cloud provider)
 
 #### Technical Safeguards
+
 - ✅ Access Control (RLS implemented)
 - ⚠️ Audit Controls (partially implemented)
 - ✅ Integrity (database constraints)
@@ -583,18 +614,18 @@ module.exports = {
 const ALERT_RULES = {
   failed_logins: {
     threshold: 5,
-    window: '5 minutes',
-    action: 'Lock account',
+    window: "5 minutes",
+    action: "Lock account",
   },
   bulk_export: {
     threshold: 100, // records
-    window: '1 hour',
-    action: 'Admin notification',
+    window: "1 hour",
+    action: "Admin notification",
   },
   api_errors: {
     threshold: 10,
-    window: '1 minute',
-    action: 'Engineering notification',
+    window: "1 minute",
+    action: "Engineering notification",
   },
 };
 ```
@@ -606,6 +637,7 @@ const ALERT_RULES = {
 ### Pre-Production Checklist
 
 #### Authentication & Authorization
+
 - [ ] Integrate Supabase Auth
 - [ ] Implement MFA
 - [ ] Configure session timeouts
@@ -613,6 +645,7 @@ const ALERT_RULES = {
 - [ ] Test RLS policies
 
 #### Data Protection
+
 - [ ] Enable encryption at rest
 - [ ] Implement column-level encryption for PHI
 - [ ] Configure database backups
@@ -620,6 +653,7 @@ const ALERT_RULES = {
 - [ ] Test data deletion procedures
 
 #### API Security
+
 - [ ] Add input validation (Zod schemas)
 - [ ] Implement rate limiting
 - [ ] Configure CORS
@@ -627,6 +661,7 @@ const ALERT_RULES = {
 - [ ] Test API endpoints for vulnerabilities
 
 #### Compliance
+
 - [ ] Sign BAAs with vendors
 - [ ] Document PHI handling procedures
 - [ ] Create incident response plan
@@ -634,6 +669,7 @@ const ALERT_RULES = {
 - [ ] Perform risk assessment
 
 #### Monitoring & Audit
+
 - [ ] Set up error tracking (Sentry)
 - [ ] Configure log aggregation
 - [ ] Create alert rules
@@ -641,6 +677,7 @@ const ALERT_RULES = {
 - [ ] Document audit procedures
 
 #### Infrastructure
+
 - [ ] Review cloud configurations
 - [ ] Implement secrets rotation
 - [ ] Set up disaster recovery
@@ -709,6 +746,7 @@ const ALERT_RULES = {
 Greenlight PA has a **strong security foundation** with Row Level Security, comprehensive audit logging, and type-safe codebase. The system is well-architected for multi-tenant healthcare data.
 
 **Critical Action Items Before Production:**
+
 1. Integrate user authentication
 2. Address dependency vulnerabilities
 3. Implement input validation and rate limiting
@@ -718,6 +756,7 @@ Greenlight PA has a **strong security foundation** with Row Level Security, comp
 **Estimated Timeline to Production-Ready Security:** 2-3 weeks
 
 **Next Steps:**
+
 1. Review and approve this assessment
 2. Prioritize security tasks
 3. Assign security responsibilities

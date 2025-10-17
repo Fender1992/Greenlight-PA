@@ -122,10 +122,7 @@ export async function PATCH(
       );
     }
 
-    const { error } = await supabase
-      .from("order")
-      .update(updates)
-      .eq("id", id);
+    const { error } = await supabase.from("order").update(updates).eq("id", id);
 
     if (error) {
       return NextResponse.json(

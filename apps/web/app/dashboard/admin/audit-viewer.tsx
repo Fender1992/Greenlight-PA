@@ -99,7 +99,9 @@ export default function AuditLogViewer() {
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedLog, setSelectedLog] = useState<typeof MOCK_AUDIT_LOGS[0] | null>(null);
+  const [selectedLog, setSelectedLog] = useState<
+    (typeof MOCK_AUDIT_LOGS)[0] | null
+  >(null);
 
   const filteredLogs = MOCK_AUDIT_LOGS.filter((log) => {
     const matchesAction =
@@ -118,9 +120,7 @@ export default function AuditLogViewer() {
   return (
     <div>
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          Audit Log
-        </h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Audit Log</h3>
         <p className="text-sm text-gray-600">
           All system actions are logged for security and compliance. Logs are
           retained for 7 years per HIPAA requirements.
@@ -308,9 +308,7 @@ export default function AuditLogViewer() {
 
             <dl className="space-y-3">
               <div>
-                <dt className="text-sm font-medium text-gray-500">
-                  Timestamp
-                </dt>
+                <dt className="text-sm font-medium text-gray-500">Timestamp</dt>
                 <dd className="text-sm text-gray-900">{selectedLog.at}</dd>
               </div>
 
@@ -366,19 +364,13 @@ export default function AuditLogViewer() {
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-sm text-gray-500">PA Actions</div>
           <div className="text-2xl font-bold text-blue-600">
-            {
-              MOCK_AUDIT_LOGS.filter((l) => l.subject === "pa_request")
-                .length
-            }
+            {MOCK_AUDIT_LOGS.filter((l) => l.subject === "pa_request").length}
           </div>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-sm text-gray-500">Attachments</div>
           <div className="text-2xl font-bold text-indigo-600">
-            {
-              MOCK_AUDIT_LOGS.filter((l) => l.subject === "attachment")
-                .length
-            }
+            {MOCK_AUDIT_LOGS.filter((l) => l.subject === "attachment").length}
           </div>
         </div>
         <div className="bg-white rounded-lg shadow p-4">

@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeAll } from "vitest";
-import { supabase, supabaseAdmin } from "../client";
+import { supabaseAdmin } from "../client";
 
 // NOTE: These tests require a live Supabase instance with migrations applied
 // They will be skipped in CI until Supabase is configured
