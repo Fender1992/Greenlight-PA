@@ -6,9 +6,9 @@
 
 ## Project Overview
 
-**Status:** 🟢 Section 2 Complete
-**Phase:** Section 2 - API Surface & Jobs
-**Progress:** 33% (3/9 sections complete)
+**Status:** 🟢 Section 3 Complete
+**Phase:** Section 3 - LLM Prompt Builders
+**Progress:** 44% (4/9 sections complete)
 
 ---
 
@@ -37,13 +37,23 @@
 - [x] Set up background job infrastructure (Vercel Cron)
 - [x] Write API endpoint test structure
 
-### ⏳ Next Up (Section 3)
+### ✅ Completed Tasks (Section 3)
 
-- [ ] Create LLM prompt builders (@greenlight/llm)
-- [ ] Implement checklist generator from policy
-- [ ] Implement medical necessity builder
-- [ ] Set up Claude API integration
-- [ ] Create prompt templates and versioning
+- [x] Create LLM prompt builders (@greenlight/llm)
+- [x] Implement checklist generator from policy
+- [x] Implement medical necessity builder
+- [x] Set up Claude API integration (Anthropic SDK)
+- [x] Create prompt templates and versioning system
+- [x] Add LLM API routes (checklist, medical necessity)
+- [x] Write LLM tests and comprehensive documentation
+
+### ⏳ Next Up (Section 4)
+
+- [ ] Create PDF generation package (@greenlight/pdfkit)
+- [ ] Design cover letter template
+- [ ] Design approval summary template
+- [ ] Implement PDF generation with dynamic content
+- [ ] Create PDF API endpoint
 
 ### Blockers
 
@@ -76,7 +86,8 @@
 | **Packages**       |                |               |                                       |
 | @greenlight/db     | 🟢 Complete    | 2025-10-17    | Supabase client, types, queries       |
 | @greenlight/ocr    | 🟢 Complete    | 2025-10-17    | OCR adapters (mock, planned AWS/GCP)  |
-| @greenlight/llm    | 🔴 Not Started | -             | LLM prompts (pending)                 |
+| @greenlight/llm    | 🟢 Complete    | 2025-10-17    | Claude prompts, checklist, summaries  |
+| LLM Routes         | 🟢 Complete    | 2025-10-17    | Checklist + medical necessity API     |
 | @greenlight/pdfkit | 🔴 Not Started | -             | PDF generation (pending)              |
 | @greenlight/policy | 🔴 Not Started | -             | Policy scraper (pending)              |
 
@@ -138,7 +149,7 @@
 
 - @greenlight/db - ✅ Supabase client, types, query SDK, RLS guards
 - @greenlight/ocr - ✅ OCR adapters (mock, Textract, Document AI)
-- @greenlight/llm - 🔴 Anthropic Claude prompts (pending)
+- @greenlight/llm - ✅ Claude prompts (checklist, medical necessity, versioning)
 - @greenlight/pdfkit - 🔴 PDF generation (pending)
 - @greenlight/policy - 🔴 Policy scraper (pending)
 
@@ -150,6 +161,37 @@
 ---
 
 ## Recent Changes
+
+### 2025-10-17 - Section 3 Complete (LLM Prompt Builders)
+
+- ✅ Created @greenlight/llm package
+  - Anthropic Claude SDK integration
+  - Type-safe response wrappers (LLMResponse<T>)
+  - Streaming support with callClaudeStream()
+- ✅ Implemented checklist generator
+  - Generates documentation requirements from payer policies
+  - Input: modality, CPT/ICD codes, payer, policy snippets
+  - Output: JSON array of checklist items with rationale
+  - Temperature: 0.3 for deterministic results
+- ✅ Implemented medical necessity builder
+  - Generates comprehensive medical necessity narratives
+  - Three sections: medical necessity, indications, risk/benefit
+  - Input: patient demographics, clinical notes, policy criteria
+  - Temperature: 0.5 for balanced creativity
+- ✅ Prompt versioning system
+  - PROMPT_VERSIONS registry for tracking changes
+  - getCurrentVersion() helper
+  - Metadata tracking (model, date, changes)
+- ✅ LLM API routes
+  - `/api/llm/checklist` - Generate checklist for PA request
+  - `/api/llm/medical-necessity` - Generate summary for PA request
+  - Feature flag: ENABLE_LLM
+  - Auto-inserts results into database
+  - Returns usage metrics for cost tracking
+- ✅ Comprehensive tests and documentation
+  - Unit tests with mocked Claude API
+  - Full README with usage examples, pricing, best practices
+- 📝 Updated STATUS.md to 44% complete (4/9 sections)
 
 ### 2025-10-17 - Section 2 Complete (API Surface & Jobs)
 
