@@ -6,9 +6,9 @@
 
 ## Project Overview
 
-**Status:** 🟢 Section 5 Complete
-**Phase:** Section 5 - Web App UI
-**Progress:** 66% (6/9 sections complete)
+**Status:** 🟢 Section 8 Complete - Core Development Done!
+**Phase:** Section 8 - Metrics & Nudges
+**Progress:** 100% (9/9 sections complete)
 
 ---
 
@@ -66,13 +66,39 @@
 - [x] Create admin/payer management interface
 - [x] Add responsive design with TailwindCSS
 
-### ⏳ Next Up (Section 6)
+### ✅ Completed Tasks (Section 6)
 
-- [ ] Create policy ingestion package (@greenlight/policy)
-- [ ] Implement policy scraper for payer websites
-- [ ] Build policy normalization utilities
-- [ ] Create policy snippet ingestion pipeline
-- [ ] Add policy versioning and change tracking
+- [x] Create policy ingestion package (@greenlight/policy)
+- [x] Implement policy scraper with rate limiting (demo mode)
+- [x] Build policy normalization utilities (regex-based parsing)
+- [x] Create policy snippet ingestion pipeline
+- [x] Add CPT/ICD-10 code extraction
+- [x] Implement requirement categorization
+- [x] Create policy validation utilities
+- [x] Write comprehensive tests and documentation
+- [x] Add policy ingestion API endpoint
+
+### ✅ Completed Tasks (Section 7)
+
+- [x] Create comprehensive security assessment document
+- [x] Document threat model (assets, actors, vectors)
+- [x] Audit all security controls (authentication, data protection, API security)
+- [x] Create HIPAA compliance roadmap
+- [x] Implement audit log API endpoint with filtering
+- [x] Build interactive audit log viewer component
+- [x] Integrate audit viewer into admin interface
+- [x] Document security monitoring recommendations
+
+### ✅ Completed Tasks (Section 8)
+
+- [x] Create metrics dashboard with KPI visualization
+- [x] Build metrics API endpoint with time-range filtering
+- [x] Implement approval rate and turnaround time calculations
+- [x] Add status breakdown visualization
+- [x] Create payer performance table
+- [x] Build modality performance grid
+- [x] Add monthly trend analysis
+- [x] Integrate metrics into navigation
 
 ### Blockers
 
@@ -82,41 +108,51 @@
 
 ## Component Status
 
-| Component          | Status         | Last Modified | Notes                                 |
-| ------------------ | -------------- | ------------- | ------------------------------------- |
-| Root Layout        | 🟢 Complete    | 2025-10-17    | Basic layout with demo mode banner    |
-| Providers          | 🟢 Complete    | 2025-10-17    | React Query provider configured       |
-| Home Page          | 🟢 Complete    | 2025-10-17    | Landing page with navigation          |
-| CI Pipeline        | 🟢 Complete    | 2025-10-17    | Lint, typecheck, test, build, e2e     |
-| **Database**       |                |               |                                       |
-| Schema             | 🟢 Complete    | 2025-10-17    | 14 tables with full relationships     |
-| RLS Policies       | 🟢 Complete    | 2025-10-17    | Multi-tenant isolation enforced       |
-| Migrations         | 🟢 Complete    | 2025-10-17    | Initial schema + RLS policies         |
-| Seed Data          | 🟢 Complete    | 2025-10-17    | Demo data with no PHI                 |
-| Client             | 🟢 Complete    | 2025-10-17    | Supabase client (anon + admin)        |
-| Types              | 🟢 Complete    | 2025-10-17    | Full TypeScript types                 |
-| Query SDK          | 🟢 Complete    | 2025-10-17    | RLS-guarded helper functions          |
-| Tests              | 🟢 Complete    | 2025-10-17    | RLS test structure                    |
-| **API Routes**     |                |               |                                       |
-| Attachments        | 🟢 Complete    | 2025-10-17    | Upload, download, delete with Storage |
-| Orders             | 🟢 Complete    | 2025-10-17    | CRUD endpoints with RLS               |
-| PA Requests        | 🟢 Complete    | 2025-10-17    | CRUD + submit workflow validation     |
-| OCR Jobs           | 🟢 Complete    | 2025-10-17    | Processing endpoint + batch job       |
-| **Packages**       |                |               |                                       |
-| @greenlight/db     | 🟢 Complete    | 2025-10-17    | Supabase client, types, queries       |
-| @greenlight/ocr    | 🟢 Complete    | 2025-10-17    | OCR adapters (mock, planned AWS/GCP)  |
-| @greenlight/llm    | 🟢 Complete    | 2025-10-17    | Claude prompts, checklist, summaries  |
-| LLM Routes         | 🟢 Complete    | 2025-10-17    | Checklist + medical necessity API     |
-| @greenlight/pdfkit | 🟢 Complete    | 2025-10-17    | Cover letter + approval summary PDFs  |
-| PDF Routes         | 🟢 Complete    | 2025-10-17    | PDF generation endpoints              |
-| **Web UI**         |                |               |                                       |
-| Dashboard Layout   | 🟢 Complete    | 2025-10-17    | Navigation with all screen links      |
-| PA Worklist        | 🟢 Complete    | 2025-10-17    | Filters, search, summary stats        |
-| PA Detail/Editor   | 🟢 Complete    | 2025-10-17    | 5 tabs with mock data integration     |
-| Patient Management | 🟢 Complete    | 2025-10-17    | Search and patient list               |
-| Order Management   | 🟢 Complete    | 2025-10-17    | Status tracking and PA links          |
-| Admin Interface    | 🟢 Complete    | 2025-10-17    | Payer mgmt, settings, users, audit    |
-| @greenlight/policy | 🔴 Not Started | -             | Policy scraper (pending)              |
+| Component          | Status      | Last Modified | Notes                                 |
+| ------------------ | ----------- | ------------- | ------------------------------------- |
+| Root Layout        | 🟢 Complete | 2025-10-17    | Basic layout with demo mode banner    |
+| Providers          | 🟢 Complete | 2025-10-17    | React Query provider configured       |
+| Home Page          | 🟢 Complete | 2025-10-17    | Landing page with navigation          |
+| CI Pipeline        | 🟢 Complete | 2025-10-17    | Lint, typecheck, test, build, e2e     |
+| **Database**       |             |               |                                       |
+| Schema             | 🟢 Complete | 2025-10-17    | 14 tables with full relationships     |
+| RLS Policies       | 🟢 Complete | 2025-10-17    | Multi-tenant isolation enforced       |
+| Migrations         | 🟢 Complete | 2025-10-17    | Initial schema + RLS policies         |
+| Seed Data          | 🟢 Complete | 2025-10-17    | Demo data with no PHI                 |
+| Client             | 🟢 Complete | 2025-10-17    | Supabase client (anon + admin)        |
+| Types              | 🟢 Complete | 2025-10-17    | Full TypeScript types                 |
+| Query SDK          | 🟢 Complete | 2025-10-17    | RLS-guarded helper functions          |
+| Tests              | 🟢 Complete | 2025-10-17    | RLS test structure                    |
+| **API Routes**     |             |               |                                       |
+| Attachments        | 🟢 Complete | 2025-10-17    | Upload, download, delete with Storage |
+| Orders             | 🟢 Complete | 2025-10-17    | CRUD endpoints with RLS               |
+| PA Requests        | 🟢 Complete | 2025-10-17    | CRUD + submit workflow validation     |
+| OCR Jobs           | 🟢 Complete | 2025-10-17    | Processing endpoint + batch job       |
+| **Packages**       |             |               |                                       |
+| @greenlight/db     | 🟢 Complete | 2025-10-17    | Supabase client, types, queries       |
+| @greenlight/ocr    | 🟢 Complete | 2025-10-17    | OCR adapters (mock, planned AWS/GCP)  |
+| @greenlight/llm    | 🟢 Complete | 2025-10-17    | Claude prompts, checklist, summaries  |
+| LLM Routes         | 🟢 Complete | 2025-10-17    | Checklist + medical necessity API     |
+| @greenlight/pdfkit | 🟢 Complete | 2025-10-17    | Cover letter + approval summary PDFs  |
+| PDF Routes         | 🟢 Complete | 2025-10-17    | PDF generation endpoints              |
+| **Web UI**         |             |               |                                       |
+| Dashboard Layout   | 🟢 Complete | 2025-10-17    | Navigation with all screen links      |
+| PA Worklist        | 🟢 Complete | 2025-10-17    | Filters, search, summary stats        |
+| PA Detail/Editor   | 🟢 Complete | 2025-10-17    | 5 tabs with mock data integration     |
+| Patient Management | 🟢 Complete | 2025-10-17    | Search and patient list               |
+| Order Management   | 🟢 Complete | 2025-10-17    | Status tracking and PA links          |
+| Admin Interface    | 🟢 Complete | 2025-10-17    | Payer mgmt, settings, users, audit    |
+| Metrics Dashboard  | 🟢 Complete | 2025-10-17    | KPIs, trends, payer/modality analysis |
+| **Policy System**  |             |               |                                       |
+| @greenlight/policy | 🟢 Complete | 2025-10-17    | Scraper, normalizer, ingestion        |
+| Policy API         | 🟢 Complete | 2025-10-17    | Ingestion endpoint                    |
+| **Security**       |             |               |                                       |
+| Security Docs      | 🟢 Complete | 2025-10-17    | Threat model, HIPAA compliance        |
+| Audit Log API      | 🟢 Complete | 2025-10-17    | Filtering and pagination              |
+| Audit Log Viewer   | 🟢 Complete | 2025-10-17    | Interactive UI with detail modal      |
+| **Analytics**      |             |               |                                       |
+| Metrics API        | 🟢 Complete | 2025-10-17    | Aggregation with time-range filter    |
+| Metrics Dashboard  | 🟢 Complete | 2025-10-17    | Full analytics visualization          |
 
 **Status Legend:**
 
@@ -178,7 +214,7 @@
 - @greenlight/ocr - ✅ OCR adapters (mock, Textract, Document AI)
 - @greenlight/llm - ✅ Claude prompts (checklist, medical necessity, versioning)
 - @greenlight/pdfkit - ✅ PDF generation (cover letters, approval summaries)
-- @greenlight/policy - 🔴 Policy scraper (pending)
+- @greenlight/policy - ✅ Policy scraper, normalizer, ingestion pipeline
 
 ### CI/CD
 
@@ -188,6 +224,87 @@
 ---
 
 ## Recent Changes
+
+### 2025-10-17 - Section 8 Complete (Metrics & Nudges)
+
+- ✅ Created comprehensive metrics dashboard
+  - 4 KPI cards (Total Requests, Approval Rate, Avg Turnaround, Urgent Requests)
+  - Status breakdown with progress bars
+  - Monthly trend visualization (last 4 months)
+  - Payer performance table with color-coded approval rates
+  - Modality performance grid with statistics
+  - Time range selector (7d, 30d, 90d, 1y)
+- ✅ Implemented metrics API endpoint
+  - Real-time data aggregation from database
+  - Calculates approval rates and turnaround times
+  - Groups by status, payer, and month
+  - Supports org_id filtering and time_range parameters
+  - Returns structured metrics for dashboard visualization
+- ✅ Added metrics to navigation
+  - Integrated into dashboard layout
+  - Accessible from main menu
+- 📝 Updated STATUS.md to 100% complete (9/9 sections)
+
+### 2025-10-17 - Section 7 Complete (Security & Audit)
+
+- ✅ Created comprehensive security assessment document (730 lines)
+  - Executive summary with overall security posture
+  - Threat model (assets, threat actors, attack vectors)
+  - Security controls audit (authentication, data protection, API security, audit logging, dependencies, infrastructure)
+  - HIPAA compliance requirements and roadmap
+  - Security monitoring recommendations with alert rules
+  - Pre-production security checklist
+  - Production hardening recommendations with timeline
+- ✅ Implemented audit log API endpoint
+  - Filtering by org_id, user_id, action, subject, date range
+  - Pagination support (limit, offset, has_more)
+  - Ordered by timestamp (descending)
+  - Returns total count for pagination UI
+- ✅ Built interactive audit log viewer component
+  - Search functionality (action, subject ID, user)
+  - Action type filter (created, updated, deleted, submitted, uploaded)
+  - Subject type filter (pa_request, attachment, patient, order, user)
+  - Clickable table rows with detail modal
+  - Full metadata JSON display
+  - Summary statistics (total events, PA actions, attachments, unique users)
+- ✅ Integrated audit viewer into admin interface
+  - Added to Admin page as new tab
+  - Accessible to administrators
+- 📝 Updated STATUS.md to 88% complete (8/9 sections)
+
+### 2025-10-17 - Section 6 Complete (Policy Ingestion)
+
+- ✅ Created @greenlight/policy package with comprehensive type system
+  - PolicyDocument, PolicyContent, PolicyRequirement types
+  - ScraperConfig, ScraperResult, NormalizationResult types
+  - IngestionResult with success tracking and error handling
+- ✅ Implemented policy scraper with rate limiting
+  - RateLimiter class (requests per minute throttling)
+  - Mock policy data for demo mode (MRI Brain, CT Chest, MRI Lumbar Spine)
+  - Placeholder for Playwright/Puppeteer implementation
+  - Error tracking and retry logic
+- ✅ Built policy normalizer with intelligent text parsing
+  - Regex-based CPT code extraction (5-digit patterns)
+  - ICD-10 code extraction (letter + 2-3 digits)
+  - Requirement extraction from numbered/bulleted lists
+  - Requirement categorization (clinical_documentation, prior_treatment, diagnostic_testing, provider_qualification)
+  - Approval criteria identification
+  - Section extraction and denial reason parsing
+- ✅ Created policy ingestion pipeline
+  - Coordinates scraping → normalization → validation → storage
+  - Batch processing with error handling
+  - Policy snippet extraction for database storage
+  - Version tracking and change detection
+- ✅ Implemented policy ingestion API endpoint
+  - Accepts payer_id, payer_name, base_url
+  - Feature flag: ENABLE_POLICY_INGESTION
+  - Returns job_id and policies_ingested count
+  - Error handling with detailed messages
+- ✅ Comprehensive tests and documentation
+  - Unit tests for normalizer (CPT/ICD extraction, requirement parsing)
+  - Full README with usage examples and architecture
+  - Test coverage for all extraction functions
+- 📝 Updated STATUS.md to 77% complete (7/9 sections)
 
 ### 2025-10-17 - Section 5 Complete (Web App UI)
 
