@@ -4,8 +4,8 @@
  */
 
 import { NextResponse } from "next/server";
-import { ingestPoliciesForPayer } from "@policy";
-import type { ScraperConfig } from "@policy";
+import { ingestPoliciesForPayer } from "@greenlight/policy";
+import type { ScraperConfig } from "@greenlight/policy";
 
 /**
  * POST /api/policy/ingest

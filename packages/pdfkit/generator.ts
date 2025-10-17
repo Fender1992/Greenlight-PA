@@ -4,7 +4,8 @@
  */
 
 import PDFDocument from "pdfkit";
-import { Readable } from "stream";
+
+type PDFKitDocument = InstanceType<typeof PDFDocument>;
 
 /**
  * PDF Generation Options
@@ -22,14 +23,14 @@ export interface PDFOptions {
  */
 export interface PDFResult {
   success: boolean;
-  buffer?: Buffer;
+  buffer?: Uint8Array;
   error?: string;
 }
 
 /**
  * Create a new PDF document
  */
-export function createPDF(options: PDFOptions = {}): PDFDocument {
+export function createPDF(options: PDFOptions = {}): PDFKitDocument {
   return new PDFDocument({
     size: "LETTER",
     margins: {
@@ -52,12 +53,12 @@ export function createPDF(options: PDFOptions = {}): PDFDocument {
 /**
  * Convert PDF stream to buffer
  */
-export async function pdfToBuffer(doc: PDFDocument): Promise<Buffer> {
+export async function pdfToBuffer(doc: PDFKitDocument): Promise<Uint8Array> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
 
     doc.on("data", (chunk: Buffer) => chunks.push(chunk));
-    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("end", () => resolve(new Uint8Array(Buffer.concat(chunks))));
     doc.on("error", reject);
 
     doc.end();
@@ -68,10 +69,10 @@ export async function pdfToBuffer(doc: PDFDocument): Promise<Buffer> {
  * Add header to PDF
  */
 export function addHeader(
-  doc: PDFDocument,
+  doc: PDFKitDocument,
   title: string,
   subtitle?: string
-): PDFDocument {
+): PDFKitDocument {
   doc
     .fontSize(20)
     .font("Helvetica-Bold")
@@ -96,10 +97,10 @@ export function addHeader(
  * Add section header
  */
 export function addSection(
-  doc: PDFDocument,
+  doc: PDFKitDocument,
   title: string,
   content?: string
-): PDFDocument {
+): PDFKitDocument {
   // Check if we need a new page
   if (doc.y > 650) {
     doc.addPage();
@@ -124,10 +125,10 @@ export function addSection(
  * Add table to PDF
  */
 export function addTable(
-  doc: PDFDocument,
+  doc: PDFKitDocument,
   headers: string[],
   rows: string[][]
-): PDFDocument {
+): PDFKitDocument {
   const startX = doc.page.margins.left;
   const startY = doc.y;
   const columnWidth =
@@ -186,10 +187,10 @@ export function addTable(
  * Add footer to all pages
  */
 export function addFooter(
-  doc: PDFDocument,
+  doc: PDFKitDocument,
   text: string,
   pageNumbering: boolean = true
-): PDFDocument {
+): PDFKitDocument {
   const pages = doc.bufferedPageRange();
 
   for (let i = 0; i < pages.count; i++) {
@@ -234,10 +235,10 @@ export function addFooter(
  * Add formatted list
  */
 export function addList(
-  doc: PDFDocument,
+  doc: PDFKitDocument,
   items: string[],
   options: { bullet?: string; indent?: number } = {}
-): PDFDocument {
+): PDFKitDocument {
   const bullet = options.bullet || "•";
   const indent = options.indent || 20;
 

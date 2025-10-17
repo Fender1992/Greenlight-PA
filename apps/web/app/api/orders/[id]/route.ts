@@ -5,6 +5,12 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser, getOrderById, supabase } from "@greenlight/db";
+import type { Database } from "@greenlight/db";
+
+type OrderRow = Database["public"]["Tables"]["order"]["Row"];
+type OrderUpdate = Partial<
+  Pick<OrderRow, "modality" | "cpt_codes" | "icd10_codes" | "clinic_notes_text">
+>;
 
 /**
  * GET /api/orders/[id]
@@ -73,9 +79,19 @@ export async function PATCH(
 
     const { id } = params;
     const body = await request.json();
-    const { modality, cpt_codes, icd10_codes, clinic_notes_text } = body;
+    const {
+      modality,
+      cpt_codes,
+      icd10_codes,
+      clinic_notes_text,
+    }: {
+      modality?: OrderRow["modality"];
+      cpt_codes?: OrderRow["cpt_codes"];
+      icd10_codes?: OrderRow["icd10_codes"];
+      clinic_notes_text?: OrderRow["clinic_notes_text"];
+    } = body;
 
-    const updates: any = {};
+    const updates: OrderUpdate = {};
     if (modality) updates.modality = modality;
     if (cpt_codes) {
       if (!Array.isArray(cpt_codes)) {
@@ -106,18 +122,10 @@ export async function PATCH(
       );
     }
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("order")
       .update(updates)
-      .eq("id", id)
-      .select(
-        `
-        *,
-        patient:patient_id(*),
-        provider:provider_id(*)
-      `
-      )
-      .single();
+      .eq("id", id);
 
     if (error) {
       return NextResponse.json(
@@ -126,7 +134,15 @@ export async function PATCH(
       );
     }
 
-    return NextResponse.json({ success: true, data });
+    const updated = await getOrderById(id);
+    if (!updated.success) {
+      return NextResponse.json(
+        { success: false, error: updated.error },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true, data: updated.data });
   } catch (error) {
     console.error("Order update error:", error);
     return NextResponse.json(

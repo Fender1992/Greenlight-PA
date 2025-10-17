@@ -6,6 +6,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser, supabase } from "@greenlight/db";
 import { generateCoverLetter, type CoverLetterData } from "@greenlight/pdfkit";
+import type { Database } from "@greenlight/db";
+
+type Tables = Database["public"]["Tables"];
+type PaRequestRow = Tables["pa_request"]["Row"];
+type OrderRow = Tables["order"]["Row"];
+type PatientRow = Tables["patient"]["Row"];
+type ProviderRow = Tables["provider"]["Row"];
+type PayerRow = Tables["payer"]["Row"];
+type OrgRow = Tables["org"]["Row"];
+type AttachmentRow = Tables["attachment"]["Row"];
 
 /**
  * POST /api/pdf/cover-letter
@@ -38,20 +48,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch PA request with all related data
     const { data: paRequest, error: paError } = await supabase
       .from("pa_request")
-      .select(
-        `
-        *,
-        order:order_id(
-          *,
-          patient:patient_id(*),
-          provider:provider_id(*)
-        ),
-        payer:payer_id(*)
-      `
-      )
+      .select("*")
       .eq("id", pa_request_id)
       .single();
 
@@ -62,30 +61,77 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const order = paRequest.order as any;
-    const patient = order.patient as any;
-    const provider = order.provider as any;
-    const payer = paRequest.payer as any;
+    const paRequestRow = paRequest as PaRequestRow;
 
-    // Fetch organization
-    const { data: org } = await supabase
-      .from("org")
+    const [orderResult, payerResult, orgResult] = await Promise.all([
+      supabase
+        .from("order")
+        .select("*")
+        .eq("id", paRequestRow.order_id)
+        .single(),
+      supabase
+        .from("payer")
+        .select("*")
+        .eq("id", paRequestRow.payer_id)
+        .single(),
+      supabase.from("org").select("*").eq("id", paRequestRow.org_id).single(),
+    ]);
+
+    const order = orderResult.data as OrderRow | null;
+    if (orderResult.error || !order) {
+      return NextResponse.json(
+        { success: false, error: "Related order not found" },
+        { status: 404 }
+      );
+    }
+
+    const patientResult = await supabase
+      .from("patient")
       .select("*")
-      .eq("id", paRequest.org_id)
+      .eq("id", order.patient_id)
       .single();
 
-    if (!org) {
+    const providerResult = order.provider_id
+      ? await supabase
+          .from("provider")
+          .select("*")
+          .eq("id", order.provider_id)
+          .single()
+      : null;
+
+    const patient = patientResult.data as PatientRow | null;
+    if (patientResult.error || !patient) {
+      return NextResponse.json(
+        { success: false, error: "Patient not found" },
+        { status: 404 }
+      );
+    }
+
+    const payer = payerResult.data as PayerRow | null;
+    if (payerResult.error || !payer) {
+      return NextResponse.json(
+        { success: false, error: "Payer not found" },
+        { status: 404 }
+      );
+    }
+
+    const org = orgResult.data as OrgRow | null;
+    if (orgResult.error || !org) {
       return NextResponse.json(
         { success: false, error: "Organization not found" },
         { status: 404 }
       );
     }
 
-    // Fetch attachments
+    const provider = (providerResult?.data as ProviderRow | null) ?? null;
+
     const { data: attachments } = await supabase
       .from("attachment")
       .select("id, type, storage_path")
-      .eq("org_id", paRequest.org_id);
+      .eq("org_id", paRequestRow.org_id);
+
+    const normalizedPriority: CoverLetterData["priority"] =
+      paRequestRow.priority === "urgent" ? "urgent" : "standard";
 
     // Prepare cover letter data
     const coverLetterData: CoverLetterData = {
@@ -98,30 +144,37 @@ export async function POST(request: NextRequest) {
       payerAddress: undefined,
 
       patientName: patient.name,
-      patientDOB: new Date(patient.dob).toLocaleDateString(),
+      patientDOB: patient.dob
+        ? new Date(patient.dob).toLocaleDateString()
+        : "Not provided",
       patientMemberID: "Protected", // In real app, get from coverage table
 
-      providerName: provider.name,
-      providerNPI: provider.npi,
-      providerSpecialty: provider.specialty,
+      providerName: provider?.name ?? "Unknown Provider",
+      providerNPI: provider?.npi ?? "NPI not available",
+      providerSpecialty: provider?.specialty ?? undefined,
 
-      paRequestNumber: paRequest.id.slice(0, 8).toUpperCase(),
-      submissionDate: paRequest.submitted_at
-        ? new Date(paRequest.submitted_at).toLocaleDateString()
+      paRequestNumber: paRequestRow.id.slice(0, 8).toUpperCase(),
+      submissionDate: paRequestRow.submitted_at
+        ? new Date(paRequestRow.submitted_at).toLocaleDateString()
         : new Date().toLocaleDateString(),
       modality: order.modality,
-      cptCodes: order.cpt_codes || [],
-      icd10Codes: order.icd10_codes || [],
-      priority: paRequest.priority,
+      cptCodes: order.cpt_codes ?? [],
+      icd10Codes: order.icd10_codes ?? [],
+      priority: normalizedPriority,
 
       attachments:
-        attachments?.map((att) => ({
-          name: att.storage_path.split("/").pop() || "Attachment",
-          type: att.type,
-        })) || [],
+        attachments?.map((att) => {
+          const attachment = att as Pick<
+            AttachmentRow,
+            "storage_path" | "type"
+          >;
+          return {
+            name: attachment.storage_path.split("/").pop() || "Attachment",
+            type: attachment.type,
+          };
+        }) ?? [],
     };
 
-    // Generate PDF
     const result = await generateCoverLetter(coverLetterData);
 
     if (!result.success || !result.buffer) {
@@ -131,7 +184,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Return PDF file
     return new NextResponse(result.buffer, {
       status: 200,
       headers: {

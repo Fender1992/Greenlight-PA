@@ -9,6 +9,16 @@ import {
   generateMedicalNecessity,
   type MedicalNecessityInput,
 } from "@greenlight/llm";
+import type { Database } from "@greenlight/db";
+
+type Tables = Database["public"]["Tables"];
+type PaRequestRow = Tables["pa_request"]["Row"];
+type OrderRow = Tables["order"]["Row"];
+type PatientRow = Tables["patient"]["Row"];
+type PayerRow = Tables["payer"]["Row"];
+type PolicySnippetRow = Tables["policy_snippet"]["Row"];
+type PaSummaryInsert = Tables["pa_summary"]["Insert"];
+type PaSummaryRow = Tables["pa_summary"]["Row"];
 
 /**
  * POST /api/llm/medical-necessity
@@ -58,19 +68,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch PA request with full details
     const { data: paRequest, error: paError } = await supabase
       .from("pa_request")
-      .select(
-        `
-        *,
-        order:order_id(
-          *,
-          patient:patient_id(*)
-        ),
-        payer:payer_id(*)
-      `
-      )
+      .select("*")
       .eq("id", pa_request_id)
       .single();
 
@@ -81,9 +81,50 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const order = paRequest.order as any;
-    const patient = order.patient as any;
-    const payer = paRequest.payer as any;
+    const paRequestRow = paRequest as PaRequestRow;
+
+    const [orderResult, payerResult] = await Promise.all([
+      supabase
+        .from("order")
+        .select("*")
+        .eq("id", paRequestRow.order_id)
+        .single(),
+      supabase
+        .from("payer")
+        .select("*")
+        .eq("id", paRequestRow.payer_id)
+        .single(),
+    ]);
+
+    const order = orderResult.data as OrderRow | null;
+    if (orderResult.error || !order) {
+      return NextResponse.json(
+        { success: false, error: "Related order not found" },
+        { status: 404 }
+      );
+    }
+
+    const patientResult = await supabase
+      .from("patient")
+      .select("*")
+      .eq("id", order.patient_id)
+      .single();
+
+    const patient = patientResult.data as PatientRow | null;
+    if (patientResult.error || !patient) {
+      return NextResponse.json(
+        { success: false, error: "Patient not found" },
+        { status: 404 }
+      );
+    }
+
+    const payer = payerResult.data as PayerRow | null;
+    if (payerResult.error || !payer) {
+      return NextResponse.json(
+        { success: false, error: "Payer not found" },
+        { status: 404 }
+      );
+    }
 
     // Fetch relevant policy snippets for criteria
     const { data: policySnippets } = await supabase
@@ -115,10 +156,13 @@ export async function POST(request: NextRequest) {
         sex: patient.sex,
       },
       modality: order.modality,
-      cpt_codes: order.cpt_codes || [],
-      icd10_codes: order.icd10_codes || [],
-      clinic_notes: order.clinic_notes_text || "No clinical notes provided.",
-      policy_criteria: policySnippets?.map((p) => p.snippet_text) || [],
+      cpt_codes: order.cpt_codes ?? [],
+      icd10_codes: order.icd10_codes ?? [],
+      clinic_notes: order.clinic_notes_text ?? "No clinical notes provided.",
+      policy_criteria:
+        policySnippets?.map(
+          (p) => (p as Pick<PolicySnippetRow, "snippet_text">).snippet_text
+        ) ?? [],
     };
 
     // Generate medical necessity
@@ -154,16 +198,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const summaryInsert: PaSummaryInsert = {
+      pa_request_id,
+      medical_necessity_text: result.data.medical_necessity_text,
+      indications_text: result.data.indications_text,
+      risk_benefit_text: result.data.risk_benefit_text,
+      generated_by_model: result.model || "claude-3-5-sonnet-20241022",
+      version: nextVersion,
+    };
+
     const { data: summary, error: insertError } = await supabaseAdmin
       .from("pa_summary")
-      .insert({
-        pa_request_id,
-        medical_necessity_text: result.data.medical_necessity_text,
-        indications_text: result.data.indications_text,
-        risk_benefit_text: result.data.risk_benefit_text,
-        generated_by_model: result.model || "claude-3-5-sonnet-20241022",
-        version: nextVersion,
-      })
+      .insert(summaryInsert)
       .select()
       .single();
 
@@ -175,10 +221,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const summaryRow = summary as PaSummaryRow | null;
+
     return NextResponse.json({
       success: true,
       data: {
-        summary,
+        summary: summaryRow,
         llm_metadata: {
           model: result.model,
           usage: result.usage,

@@ -9,6 +9,14 @@ import {
   generateChecklist,
   type ChecklistGenerationInput,
 } from "@greenlight/llm";
+import type { Database } from "@greenlight/db";
+
+type Tables = Database["public"]["Tables"];
+type PaRequestRow = Tables["pa_request"]["Row"];
+type OrderRow = Tables["order"]["Row"];
+type PayerRow = Tables["payer"]["Row"];
+type ChecklistInsert = Tables["pa_checklist_item"]["Insert"];
+type PolicySnippetRow = Tables["policy_snippet"]["Row"];
 
 /**
  * POST /api/llm/checklist
@@ -58,19 +66,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch PA request with order and payer details
     const { data: paRequest, error: paError } = await supabase
       .from("pa_request")
-      .select(
-        `
-        *,
-        order:order_id(
-          *,
-          patient:patient_id(*)
-        ),
-        payer:payer_id(*)
-      `
-      )
+      .select("*")
       .eq("id", pa_request_id)
       .single();
 
@@ -81,8 +79,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const order = paRequest.order as any;
-    const payer = paRequest.payer as any;
+    const paRequestRow = paRequest as PaRequestRow;
+
+    const [orderResult, payerResult] = await Promise.all([
+      supabase
+        .from("order")
+        .select("*")
+        .eq("id", paRequestRow.order_id)
+        .single(),
+      supabase
+        .from("payer")
+        .select("*")
+        .eq("id", paRequestRow.payer_id)
+        .single(),
+    ]);
+
+    const order = orderResult.data as OrderRow | null;
+    if (orderResult.error || !order) {
+      return NextResponse.json(
+        { success: false, error: "Related order not found" },
+        { status: 404 }
+      );
+    }
+
+    const payer = payerResult.data as PayerRow | null;
+    if (payerResult.error || !payer) {
+      return NextResponse.json(
+        { success: false, error: "Payer not found" },
+        { status: 404 }
+      );
+    }
 
     // Fetch relevant policy snippets
     const { data: policySnippets } = await supabase
@@ -95,10 +121,13 @@ export async function POST(request: NextRequest) {
     // Prepare input for LLM
     const input: ChecklistGenerationInput = {
       modality: order.modality,
-      cpt_codes: order.cpt_codes || [],
-      icd10_codes: order.icd10_codes || [],
+      cpt_codes: order.cpt_codes ?? [],
+      icd10_codes: order.icd10_codes ?? [],
       payer_name: payer.name,
-      policy_snippets: policySnippets?.map((p) => p.snippet_text) || [],
+      policy_snippets:
+        policySnippets?.map(
+          (p) => (p as Pick<PolicySnippetRow, "snippet_text">).snippet_text
+        ) ?? [],
     };
 
     // Generate checklist
@@ -122,12 +151,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const checklistItems = result.data.map((item) => ({
+    const checklistItems: ChecklistInsert[] = result.data.map((item) => ({
       pa_request_id,
       name: item.name,
       rationale: item.rationale,
       required_bool: item.required_bool,
-      status: "pending" as const,
+      status: "pending",
     }));
 
     const { data: insertedItems, error: insertError } = await supabaseAdmin

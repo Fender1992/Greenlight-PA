@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabase, getCurrentUser } from "@greenlight/db";
+import type { Database } from "@greenlight/db";
 import crypto from "crypto";
 
 /**
@@ -57,24 +58,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate attachment type
-    const validTypes = [
-      "order",
-      "imaging",
-      "lab",
-      "notes",
-      "payer_form",
-      "appeal",
-      "other",
-    ];
-    if (!validTypes.includes(type)) {
+    if (!ATTACHMENT_TYPES.includes(type as AttachmentType)) {
       return NextResponse.json(
         {
           success: false,
-          error: `Invalid type. Must be one of: ${validTypes.join(", ")}`,
+          error: `Invalid type. Must be one of: ${ATTACHMENT_TYPES.join(", ")}`,
         },
         { status: 400 }
       );
     }
+
+    const attachmentType = type as AttachmentType;
 
     // Read file buffer
     const arrayBuffer = await file.arrayBuffer();
@@ -109,7 +103,7 @@ export async function POST(request: NextRequest) {
       .insert({
         org_id: orgId,
         storage_path: storagePath,
-        type: type as any,
+        type: attachmentType,
         sha256,
         uploaded_by: user.id,
       })
@@ -126,15 +120,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const attachmentRecord = attachmentData as AttachmentRow;
+
     return NextResponse.json({
       success: true,
       data: {
-        id: attachmentData.id,
-        storage_path: attachmentData.storage_path,
-        sha256: attachmentData.sha256,
-        type: attachmentData.type,
-        uploaded_by: attachmentData.uploaded_by,
-        created_at: attachmentData.created_at,
+        id: attachmentRecord.id,
+        storage_path: attachmentRecord.storage_path,
+        sha256: attachmentRecord.sha256,
+        type: attachmentRecord.type,
+        uploaded_by: attachmentRecord.uploaded_by,
+        created_at: attachmentRecord.created_at,
       },
     });
   } catch (error) {
@@ -199,3 +195,15 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+const ATTACHMENT_TYPES = [
+  "order",
+  "imaging",
+  "lab",
+  "notes",
+  "payer_form",
+  "appeal",
+  "other",
+] as const;
+
+type AttachmentType = (typeof ATTACHMENT_TYPES)[number];
+type AttachmentRow = Database["public"]["Tables"]["attachment"]["Row"];
