@@ -25,7 +25,12 @@
     "zod": "^3.23.8",
     "@hookform/resolvers": "^3.9.1",
     "clsx": "^2.1.1",
-    "tailwind-merge": "^2.5.5"
+    "tailwind-merge": "^2.5.5",
+    "@greenlight/db": "*",
+    "@greenlight/llm": "*",
+    "@greenlight/ocr": "*",
+    "@greenlight/pdfkit": "*",
+    "@greenlight/policy": "*"
   },
   "devDependencies": {
     "@types/node": "^20",

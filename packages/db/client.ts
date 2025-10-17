@@ -6,37 +6,72 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types/database";
 
-// Validate environment variables
-const supabaseUrl = process.env.NEXT_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_SUPABASE_ANON_KEY;
-const supabaseServiceKey = process.env.NEXT_SUPABASE_ROLE_KEY;
-const supabaseJwtSecret = process.env.NEXT_SUPABASE_JWT_SECRET;
+// Lazy client initialization to avoid build-time errors
+let _supabase: ReturnType<typeof createClient<Database>> | null = null;
+let _supabaseAdmin: ReturnType<typeof createClient<Database>> | null = null;
 
-if (!supabaseUrl) {
-  throw new Error("Missing environment variable: NEXT_SUPABASE_URL");
+/**
+ * Get Supabase URL with validation
+ */
+function getSupabaseUrl(): string {
+  const url = process.env.NEXT_SUPABASE_URL;
+  if (!url) {
+    throw new Error("Missing environment variable: NEXT_SUPABASE_URL");
+  }
+  return url;
 }
 
-if (!supabaseAnonKey) {
-  throw new Error("Missing environment variable: NEXT_SUPABASE_ANON_KEY");
+/**
+ * Get Supabase anon key with validation
+ */
+function getSupabaseAnonKey(): string {
+  const key = process.env.NEXT_SUPABASE_ANON_KEY;
+  if (!key) {
+    throw new Error("Missing environment variable: NEXT_SUPABASE_ANON_KEY");
+  }
+  return key;
 }
 
-if (!supabaseServiceKey) {
-  throw new Error("Missing environment variable: NEXT_SUPABASE_ROLE_KEY");
+/**
+ * Get Supabase service role key with validation
+ */
+function getSupabaseServiceKey(): string {
+  const key = process.env.NEXT_SUPABASE_ROLE_KEY;
+  if (!key) {
+    throw new Error("Missing environment variable: NEXT_SUPABASE_ROLE_KEY");
+  }
+  return key;
 }
 
-if (!supabaseJwtSecret) {
-  throw new Error("Missing environment variable: NEXT_SUPABASE_JWT_SECRET");
+/**
+ * Get Supabase JWT secret with validation
+ */
+function getSupabaseJwtSecret(): string {
+  const secret = process.env.NEXT_SUPABASE_JWT_SECRET;
+  if (!secret) {
+    throw new Error("Missing environment variable: NEXT_SUPABASE_JWT_SECRET");
+  }
+  return secret;
 }
 
 /**
  * Client-side Supabase client (uses anon key + RLS)
  * Use this for all client-side and user-scoped operations
  */
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
+export const supabase = new Proxy({} as ReturnType<typeof createClient<Database>>, {
+  get(target, prop) {
+    if (!_supabase) {
+      const url = getSupabaseUrl();
+      const key = getSupabaseAnonKey();
+      _supabase = createClient<Database>(url, key, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+        },
+      });
+    }
+    return Reflect.get(_supabase, prop);
   },
 });
 
@@ -51,16 +86,21 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
  * SECURITY WARNING: Never use this client with user-provided input
  * without explicit validation
  */
-export const supabaseAdmin = createClient<Database>(
-  supabaseUrl,
-  supabaseServiceKey,
-  {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  }
-);
+export const supabaseAdmin = new Proxy({} as ReturnType<typeof createClient<Database>>, {
+  get(target, prop) {
+    if (!_supabaseAdmin) {
+      const url = getSupabaseUrl();
+      const key = getSupabaseServiceKey();
+      _supabaseAdmin = createClient<Database>(url, key, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      });
+    }
+    return Reflect.get(_supabaseAdmin, prop);
+  },
+});
 
 /**
  * Helper: Get current user's org IDs
@@ -130,6 +170,12 @@ export async function getCurrentUserOrgId(): Promise<string | null> {
  */
 export type SupabaseClient = typeof supabase;
 export type SupabaseAdminClient = typeof supabaseAdmin;
-export const SUPABASE_JWT_SECRET = supabaseJwtSecret;
+
+/**
+ * Get JWT secret (lazy evaluation)
+ */
+export function getJwtSecret(): string {
+  return getSupabaseJwtSecret();
+}
 
 export default supabase;
