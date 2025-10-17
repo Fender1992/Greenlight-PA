@@ -3,13 +3,51 @@
  * Component: Dashboard Layout | Status: [Check STATUS.md] | Modified: 2025-10-17
  */
 
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { supabase } from "@greenlight/db";
+import type { User } from "@supabase/supabase-js";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
+  const displayName = user?.email || "Demo User";
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation */}
@@ -58,8 +96,28 @@ export default function DashboardLayout({
                 </Link>
               </div>
             </div>
-            <div className="flex items-center">
-              <span className="text-sm text-gray-700">Demo User</span>
+            <div className="flex items-center gap-4">
+              {!loading && (
+                <>
+                  <span className="text-sm text-gray-700">{displayName}</span>
+                  {user && (
+                    <button
+                      onClick={handleLogout}
+                      className="text-sm text-gray-500 hover:text-gray-700"
+                    >
+                      Logout
+                    </button>
+                  )}
+                  {!user && (
+                    <Link
+                      href="/login"
+                      className="text-sm text-blue-600 hover:text-blue-700"
+                    >
+                      Sign In
+                    </Link>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>

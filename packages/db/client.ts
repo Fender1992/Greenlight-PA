@@ -58,22 +58,25 @@ function getSupabaseJwtSecret(): string {
  * Client-side Supabase client (uses anon key + RLS)
  * Use this for all client-side and user-scoped operations
  */
-export const supabase = new Proxy({} as ReturnType<typeof createClient<Database>>, {
-  get(target, prop) {
-    if (!_supabase) {
-      const url = getSupabaseUrl();
-      const key = getSupabaseAnonKey();
-      _supabase = createClient<Database>(url, key, {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true,
-        },
-      });
-    }
-    return Reflect.get(_supabase, prop);
-  },
-});
+export const supabase = new Proxy(
+  {} as ReturnType<typeof createClient<Database>>,
+  {
+    get(target, prop) {
+      if (!_supabase) {
+        const url = getSupabaseUrl();
+        const key = getSupabaseAnonKey();
+        _supabase = createClient<Database>(url, key, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,
+          },
+        });
+      }
+      return Reflect.get(_supabase, prop);
+    },
+  }
+);
 
 /**
  * Server-side Supabase client (uses service role key, bypasses RLS)
@@ -86,21 +89,24 @@ export const supabase = new Proxy({} as ReturnType<typeof createClient<Database>
  * SECURITY WARNING: Never use this client with user-provided input
  * without explicit validation
  */
-export const supabaseAdmin = new Proxy({} as ReturnType<typeof createClient<Database>>, {
-  get(target, prop) {
-    if (!_supabaseAdmin) {
-      const url = getSupabaseUrl();
-      const key = getSupabaseServiceKey();
-      _supabaseAdmin = createClient<Database>(url, key, {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-        },
-      });
-    }
-    return Reflect.get(_supabaseAdmin, prop);
-  },
-});
+export const supabaseAdmin = new Proxy(
+  {} as ReturnType<typeof createClient<Database>>,
+  {
+    get(target, prop) {
+      if (!_supabaseAdmin) {
+        const url = getSupabaseUrl();
+        const key = getSupabaseServiceKey();
+        _supabaseAdmin = createClient<Database>(url, key, {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+          },
+        });
+      }
+      return Reflect.get(_supabaseAdmin, prop);
+    },
+  }
+);
 
 /**
  * Helper: Get current user's org IDs
