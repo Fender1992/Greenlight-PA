@@ -6,9 +6,9 @@
 
 ## Project Overview
 
-**Status:** 🟢 Section 3 Complete
-**Phase:** Section 3 - LLM Prompt Builders
-**Progress:** 44% (4/9 sections complete)
+**Status:** 🟢 Section 4 Complete
+**Phase:** Section 4 - PDF Generation
+**Progress:** 56% (5/9 sections complete)
 
 ---
 
@@ -47,13 +47,22 @@
 - [x] Add LLM API routes (checklist, medical necessity)
 - [x] Write LLM tests and comprehensive documentation
 
-### ⏳ Next Up (Section 4)
+### ✅ Completed Tasks (Section 4)
 
-- [ ] Create PDF generation package (@greenlight/pdfkit)
-- [ ] Design cover letter template
-- [ ] Design approval summary template
-- [ ] Implement PDF generation with dynamic content
-- [ ] Create PDF API endpoint
+- [x] Create PDF generation package (@greenlight/pdfkit)
+- [x] Design cover letter template
+- [x] Design approval summary template
+- [x] Implement PDF generation with dynamic content
+- [x] Create PDF API endpoints
+- [x] Write PDF tests and comprehensive documentation
+
+### ⏳ Next Up (Section 5)
+
+- [ ] Create web UI screens (worklist, PA editor)
+- [ ] Implement PA workflow UI
+- [ ] Create admin/payer management screens
+- [ ] Add real-time updates and notifications
+- [ ] Implement search and filtering
 
 ### Blockers
 
@@ -88,7 +97,8 @@
 | @greenlight/ocr    | 🟢 Complete    | 2025-10-17    | OCR adapters (mock, planned AWS/GCP)  |
 | @greenlight/llm    | 🟢 Complete    | 2025-10-17    | Claude prompts, checklist, summaries  |
 | LLM Routes         | 🟢 Complete    | 2025-10-17    | Checklist + medical necessity API     |
-| @greenlight/pdfkit | 🔴 Not Started | -             | PDF generation (pending)              |
+| @greenlight/pdfkit | 🟢 Complete    | 2025-10-17    | Cover letter + approval summary PDFs  |
+| PDF Routes         | 🟢 Complete    | 2025-10-17    | PDF generation endpoints              |
 | @greenlight/policy | 🔴 Not Started | -             | Policy scraper (pending)              |
 
 **Status Legend:**
@@ -150,7 +160,7 @@
 - @greenlight/db - ✅ Supabase client, types, query SDK, RLS guards
 - @greenlight/ocr - ✅ OCR adapters (mock, Textract, Document AI)
 - @greenlight/llm - ✅ Claude prompts (checklist, medical necessity, versioning)
-- @greenlight/pdfkit - 🔴 PDF generation (pending)
+- @greenlight/pdfkit - ✅ PDF generation (cover letters, approval summaries)
 - @greenlight/policy - 🔴 Policy scraper (pending)
 
 ### CI/CD
@@ -161,6 +171,40 @@
 ---
 
 ## Recent Changes
+
+### 2025-10-17 - Section 4 Complete (PDF Generation)
+
+- ✅ Created @greenlight/pdfkit package with PDFKit library
+  - Core PDF generation utilities (createPDF, pdfToBuffer)
+  - Professional formatting helpers (headers, sections, tables, lists, footers)
+  - Type-safe template data structures
+- ✅ Implemented cover letter template
+  - Organization and payer information
+  - Patient demographics (de-identified)
+  - Provider details with NPI
+  - Requested service (CPT/ICD codes)
+  - Medical necessity statement
+  - Attachments list
+  - Provider signature block
+  - Priority indicator for urgent requests
+- ✅ Implemented approval summary template
+  - Status badge (approved/denied/pending) with color coding
+  - Summary information tables
+  - Authorization details (number, validity period)
+  - Decision rationale and reviewer notes
+  - Requirements checklist
+  - Next steps guidance (context-dependent)
+  - Professional footer
+- ✅ PDF API endpoints
+  - `/api/pdf/cover-letter` - Generate cover letter for PA submission
+  - `/api/pdf/approval-summary` - Generate approval/denial summary
+  - Both endpoints fetch full PA request data from database
+  - Return ready-to-download PDF files
+- ✅ Comprehensive tests and documentation
+  - Unit tests for PDF generation (tests/generator.test.ts)
+  - Full README with usage examples and customization guide
+  - Design decisions documented (layout, fonts, colors)
+- 📝 Updated STATUS.md to 56% complete (5/9 sections)
 
 ### 2025-10-17 - Section 3 Complete (LLM Prompt Builders)
 
