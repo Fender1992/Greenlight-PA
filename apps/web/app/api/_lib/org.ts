@@ -6,6 +6,7 @@
 import {
   getCurrentUser,
   getCurrentUserOrgId,
+  getUserOrgIds,
 } from "@greenlight/db";
 
 /**
@@ -37,7 +38,16 @@ export async function requireUser() {
  * or from the authenticated user's memberships.
  */
 export async function resolveOrgId(providedOrgId: string | null) {
+  const user = await requireUser();
+
   if (providedOrgId) {
+    const memberships = await getUserOrgIds(user.id);
+    if (!memberships.includes(providedOrgId)) {
+      throw new HttpError(
+        403,
+        "User does not have access to this organization"
+      );
+    }
     return providedOrgId;
   }
 

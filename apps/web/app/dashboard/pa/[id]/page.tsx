@@ -1,132 +1,30 @@
-/**
- * ⚠️  READ/UPDATE STATUS.md BEFORE & AFTER CHANGES
- * Component: PA Detail/Editor | Status: [Check STATUS.md] | Modified: 2025-10-17
- */
-
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiGet, apiPatch, apiPost, ApiResponse } from "@web/lib/api";
+import type {
+  ChecklistItemRow,
+  PaRequestWithRelations,
+  PaSummaryRow,
+  StatusEventRow,
+} from "@web/types/api";
 
-// Mock data for demo
-const MOCK_PA_DATA = {
-  id: "PA-001",
-  status: "draft",
-  priority: "standard",
-  createdDate: "2025-10-15",
-  submittedDate: null,
-  statusDate: "2025-10-15",
-
-  // Patient info
-  patient: {
-    name: "Smith, John",
-    dob: "01/15/1975",
-    memberId: "BC123456789",
-    gender: "M",
-  },
-
-  // Order info
-  order: {
-    modality: "MRI Brain",
-    bodyPart: "Brain",
-    cptCodes: ["70553"],
-    icd10Codes: ["G89.29", "R51"],
-    orderingProvider: "Dr. Jane Doe",
-    orderingProviderNPI: "1234567890",
-    orderDate: "2025-10-14",
-  },
-
-  // Payer info
-  payer: {
-    name: "Blue Cross Blue Shield",
-    planType: "PPO",
-    groupNumber: "GRP123",
-  },
-
-  // Organization
-  organization: {
-    name: "Downtown Medical Center",
-    npi: "9876543210",
-  },
-
-  // Checklist
-  checklist: [
-    {
-      id: "1",
-      requirement: "Clinical notes from last 3 months",
-      status: "met",
-      notes: "Uploaded on 10/15",
-    },
-    {
-      id: "2",
-      requirement: "Prior conservative treatment documentation",
-      status: "not_met",
-      notes: "Still pending from provider",
-    },
-    {
-      id: "3",
-      requirement: "Diagnostic imaging reports",
-      status: "met",
-      notes: "CT scan report attached",
-    },
-  ],
-
-  // Medical necessity summary
-  medicalNecessity: {
-    summary:
-      "Patient presents with chronic headaches and neurological symptoms. Conservative treatment with medications has been attempted over the past 6 months without significant improvement. MRI with contrast is medically necessary to rule out intracranial pathology including mass lesions, vascular abnormalities, and inflammatory conditions. Clinical presentation and failed conservative management support the need for advanced imaging.",
-    generatedDate: "2025-10-15",
-    version: "v1.0",
-  },
-
-  // Attachments
-  attachments: [
-    {
-      id: "att-1",
-      filename: "clinical_notes_2025.pdf",
-      fileType: "clinical_notes",
-      uploadedDate: "2025-10-15",
-      uploadedBy: "Demo User",
-      size: "2.3 MB",
-    },
-    {
-      id: "att-2",
-      filename: "ct_scan_report.pdf",
-      fileType: "imaging_report",
-      uploadedDate: "2025-10-15",
-      uploadedBy: "Demo User",
-      size: "1.1 MB",
-    },
-  ],
-
-  // History
-  history: [
-    {
-      id: "h1",
-      date: "2025-10-15 10:30 AM",
-      action: "PA Request Created",
-      user: "Demo User",
-      details: "Initial PA request created for MRI Brain",
-    },
-    {
-      id: "h2",
-      date: "2025-10-15 11:45 AM",
-      action: "Checklist Generated",
-      user: "System (LLM)",
-      details: "Generated checklist based on payer policy",
-    },
-    {
-      id: "h3",
-      date: "2025-10-15 02:15 PM",
-      action: "Attachments Uploaded",
-      user: "Demo User",
-      details: "Uploaded 2 documents",
-    },
-  ],
+const CHECKLIST_STATUS_LABEL: Record<string, string> = {
+  met: "Met",
+  not_met: "Not Met",
+  waived: "Waived",
 };
 
-const STATUS_COLORS = {
+const CHECKLIST_STATUS_COLOR: Record<string, string> = {
+  met: "text-green-600",
+  not_met: "text-red-600",
+  waived: "text-gray-500",
+};
+
+const STATUS_BADGE_COLOR: Record<string, string> = {
   draft: "bg-gray-100 text-gray-800",
   submitted: "bg-blue-100 text-blue-800",
   pending_info: "bg-yellow-100 text-yellow-800",
@@ -135,65 +33,160 @@ const STATUS_COLORS = {
   appealed: "bg-purple-100 text-purple-800",
 };
 
-const CHECKLIST_STATUS_COLORS = {
-  met: "text-green-600",
-  not_met: "text-red-600",
-  waived: "text-gray-500",
-};
-
-type Tab =
-  | "overview"
-  | "checklist"
-  | "medical-necessity"
-  | "attachments"
-  | "history";
+function formatDate(value: string | null | undefined) {
+  if (!value) return "—";
+  const date = new Date(value);
+  return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  })}`;
+}
 
 export default function PADetailPage() {
   const params = useParams();
   const paId = params.id as string;
+  const queryClient = useQueryClient();
+  const [priority, setPriority] = useState<string>("standard");
 
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
-  const [isEditing, setIsEditing] = useState(false);
-
-  // In production, fetch data based on paId
-  const paData = MOCK_PA_DATA;
-
-  const tabs: { id: Tab; label: string; count?: number }[] = [
-    { id: "overview", label: "Overview" },
-    { id: "checklist", label: "Checklist", count: paData.checklist.length },
-    { id: "medical-necessity", label: "Medical Necessity" },
-    {
-      id: "attachments",
-      label: "Attachments",
-      count: paData.attachments.length,
+  const paQuery = useQuery({
+    queryKey: ["pa-request", paId],
+    queryFn: async () => {
+      const response = await apiGet<ApiResponse<PaRequestWithRelations>>(
+        `/api/pa-requests/${paId}`
+      );
+      if (!response.success || !response.data) {
+        throw new Error(response.error || "PA request not found");
+      }
+      return response.data;
     },
-    { id: "history", label: "History", count: paData.history.length },
-  ];
+  });
 
-  const handleSubmit = () => {
-    // TODO: Call /api/pa-requests/[id]/submit
-    alert("Submit PA request (will be implemented)");
+  const data = paQuery.data;
+
+  useEffect(() => {
+    if (data?.priority) {
+      setPriority(data.priority);
+    }
+  }, [data?.priority]);
+
+  const updatePriorityMutation = useMutation({
+    mutationFn: (newPriority: string) =>
+      apiPatch<ApiResponse<PaRequestWithRelations>>(
+        `/api/pa-requests/${paId}`,
+        { priority: newPriority }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pa-request", paId] });
+    },
+  });
+
+  const submitMutation = useMutation({
+    mutationFn: () =>
+      apiPatch<ApiResponse<PaRequestWithRelations>>(
+        `/api/pa-requests/${paId}`,
+        { status: "submitted" }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pa-request", paId] });
+    },
+  });
+
+  const checklistMutation = useMutation({
+    mutationFn: () =>
+      apiPost<ApiResponse<{ checklist_items: ChecklistItemRow[] }>>(
+        "/api/llm/checklist",
+        { pa_request_id: paId }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pa-request", paId] });
+    },
+  });
+
+  const necessityMutation = useMutation({
+    mutationFn: () =>
+      apiPost<ApiResponse<{ summary: PaSummaryRow }>>(
+        "/api/llm/medical-necessity",
+        { pa_request_id: paId }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pa-request", paId] });
+    },
+  });
+
+  const downloadApprovalSummary = async () => {
+    const response = await fetch("/api/pdf/approval-summary", {
+      method: "POST",
+      body: JSON.stringify({ pa_request_id: paId }),
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!response.ok) {
+      throw new Error("Failed to generate PDF");
+    }
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `PA_${paId}_approval-summary.pdf`;
+    link.click();
+    window.URL.revokeObjectURL(url);
   };
 
-  const handleGenerateCoverLetter = () => {
-    // TODO: Call /api/pdf/cover-letter
-    alert("Generate cover letter PDF (will be implemented)");
+  const downloadCoverLetter = async () => {
+    const response = await fetch("/api/pdf/cover-letter", {
+      method: "POST",
+      body: JSON.stringify({ pa_request_id: paId }),
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!response.ok) {
+      throw new Error("Failed to generate PDF");
+    }
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `PA_${paId}_cover-letter.pdf`;
+    link.click();
+    window.URL.revokeObjectURL(url);
   };
 
-  const handleGenerateChecklist = () => {
-    // TODO: Call /api/llm/checklist
-    alert("Generate checklist with LLM (will be implemented)");
-  };
+  const checklistItems: ChecklistItemRow[] = useMemo(
+    () => data?.checklist_items ?? [],
+    [data]
+  );
 
-  const handleGenerateMedicalNecessity = () => {
-    // TODO: Call /api/llm/medical-necessity
-    alert("Generate medical necessity with LLM (will be implemented)");
-  };
+  const summaries: PaSummaryRow[] = useMemo(
+    () => data?.summaries ?? [],
+    [data]
+  );
+
+  const timeline: StatusEventRow[] = useMemo(
+    () => (data?.status_events ?? []).sort((a, b) => a.at.localeCompare(b.at)),
+    [data]
+  );
+
+  if (paQuery.isLoading) {
+    return (
+      <div className="px-4 sm:px-0">
+        <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+          Loading PA request…
+        </div>
+      </div>
+    );
+  }
+
+  if (paQuery.isError || !data) {
+    return (
+      <div className="px-4 sm:px-0">
+        <div className="bg-white rounded-lg shadow p-8 text-center text-red-600">
+          {(paQuery.error as Error)?.message || "PA request not found"}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="px-4 sm:px-0">
-      {/* Breadcrumb */}
-      <nav className="mb-4 text-sm">
+    <div className="px-4 sm:px-0 space-y-6">
+      <nav className="text-sm">
         <Link href="/dashboard" className="text-blue-600 hover:text-blue-800">
           Worklist
         </Link>
@@ -201,516 +194,248 @@ export default function PADetailPage() {
         <span className="text-gray-700">{paId}</span>
       </nav>
 
-      {/* Header */}
-      <div className="bg-white rounded-lg shadow mb-6 p-6">
-        <div className="flex justify-between items-start mb-4">
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">{paId}</h1>
             <div className="flex items-center gap-3">
               <span
-                className={`px-3 py-1 inline-flex text-sm font-semibold rounded-full ${STATUS_COLORS[paData.status as keyof typeof STATUS_COLORS]}`}
+                className={`px-3 py-1 inline-flex text-sm font-semibold rounded-full ${
+                  STATUS_BADGE_COLOR[data.status] ?? "bg-gray-100 text-gray-800"
+                }`}
               >
-                {paData.status.replace("_", " ")}
+                {data.status.replace("_", " ")}
               </span>
-              {paData.priority === "urgent" && (
-                <span className="text-red-600 font-semibold">⚠️ URGENT</span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            {paData.status === "draft" && (
-              <>
-                <button
-                  onClick={() => setIsEditing(!isEditing)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  {isEditing ? "Cancel Edit" : "Edit"}
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-                >
-                  Submit PA
-                </button>
-              </>
-            )}
-            {(paData.status === "submitted" ||
-              paData.status === "approved") && (
-              <button
-                onClick={handleGenerateCoverLetter}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              <select
+                value={priority}
+                onChange={(event) => {
+                  const newPriority = event.target.value;
+                  setPriority(newPriority);
+                  updatePriorityMutation.mutate(newPriority);
+                }}
+                className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-blue-500"
               >
-                📄 Generate Cover Letter
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Quick Info Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-gray-200">
-          <div>
-            <div className="text-sm text-gray-500">Patient</div>
-            <div className="text-base font-medium text-gray-900">
-              {paData.patient.name}
+                <option value="standard">Standard</option>
+                <option value="urgent">Urgent</option>
+              </select>
             </div>
-            <div className="text-sm text-gray-600">
-              DOB: {paData.patient.dob} | {paData.patient.gender}
-            </div>
-            <div className="text-sm text-gray-600">
-              Member ID: {paData.patient.memberId}
+            <div className="mt-2 text-sm text-gray-500">
+              Created {formatDate(data.created_at)}
             </div>
           </div>
 
-          <div>
-            <div className="text-sm text-gray-500">Procedure</div>
-            <div className="text-base font-medium text-gray-900">
-              {paData.order.modality}
-            </div>
-            <div className="text-sm text-gray-600">
-              CPT: {paData.order.cptCodes.join(", ")}
-            </div>
-            <div className="text-sm text-gray-600">
-              ICD-10: {paData.order.icd10Codes.join(", ")}
-            </div>
-          </div>
-
-          <div>
-            <div className="text-sm text-gray-500">Payer</div>
-            <div className="text-base font-medium text-gray-900">
-              {paData.payer.name}
-            </div>
-            <div className="text-sm text-gray-600">{paData.payer.planType}</div>
-            <div className="text-sm text-gray-600">
-              Provider: {paData.order.orderingProvider}
-            </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => submitMutation.mutate()}
+              disabled={submitMutation.isPending || data.status !== "draft"}
+              className="px-4 py-2 border border-transparent rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              {submitMutation.isPending ? "Submitting…" : "Submit PA"}
+            </button>
+            <button
+              onClick={() => checklistMutation.mutate()}
+              disabled={checklistMutation.isPending}
+              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+            >
+              {checklistMutation.isPending
+                ? "Generating…"
+                : "Generate Checklist"}
+            </button>
+            <button
+              onClick={() => necessityMutation.mutate()}
+              disabled={necessityMutation.isPending}
+              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+            >
+              {necessityMutation.isPending
+                ? "Generating…"
+                : "Generate Medical Necessity"}
+            </button>
+            <button
+              onClick={downloadApprovalSummary}
+              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            >
+              Download Approval Summary
+            </button>
+            <button
+              onClick={downloadCoverLetter}
+              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            >
+              Download Cover Letter
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`
-                  whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
-                  ${
-                    activeTab === tab.id
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }
-                `}
-              >
-                {tab.label}
-                {tab.count !== undefined && (
-                  <span
-                    className={`ml-2 py-0.5 px-2 rounded-full text-xs ${
-                      activeTab === tab.id
-                        ? "bg-blue-100 text-blue-600"
-                        : "bg-gray-100 text-gray-900"
-                    }`}
-                  >
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {/* Tab Content */}
-        <div className="p-6">
-          {/* Overview Tab */}
-          {activeTab === "overview" && (
-            <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="bg-white rounded-lg shadow p-6 space-y-4 lg:col-span-2">
+          <section>
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">
+              Patient Information
+            </h2>
+            <div className="grid grid-cols-2 gap-4 text-sm text-gray-700">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                  Request Information
-                </h3>
-                <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">
-                      PA Request #
-                    </dt>
-                    <dd className="mt-1 text-sm text-gray-900">{paData.id}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">
-                      Status
-                    </dt>
-                    <dd className="mt-1 text-sm text-gray-900">
-                      {paData.status.replace("_", " ")}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">
-                      Created Date
-                    </dt>
-                    <dd className="mt-1 text-sm text-gray-900">
-                      {paData.createdDate}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">
-                      Submitted Date
-                    </dt>
-                    <dd className="mt-1 text-sm text-gray-900">
-                      {paData.submittedDate || "Not yet submitted"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">
-                      Organization
-                    </dt>
-                    <dd className="mt-1 text-sm text-gray-900">
-                      {paData.organization.name}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">
-                      Org NPI
-                    </dt>
-                    <dd className="mt-1 text-sm text-gray-900">
-                      {paData.organization.npi}
-                    </dd>
-                  </div>
-                </dl>
+                <div className="text-xs text-gray-500">Name</div>
+                <div>{data.order?.patient?.name ?? "—"}</div>
               </div>
-
-              <div className="border-t border-gray-200 pt-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                  Order Details
-                </h3>
-                <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">
-                      Modality / Body Part
-                    </dt>
-                    <dd className="mt-1 text-sm text-gray-900">
-                      {paData.order.modality} - {paData.order.bodyPart}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">
-                      Order Date
-                    </dt>
-                    <dd className="mt-1 text-sm text-gray-900">
-                      {paData.order.orderDate}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">
-                      Ordering Provider
-                    </dt>
-                    <dd className="mt-1 text-sm text-gray-900">
-                      {paData.order.orderingProvider}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">
-                      Provider NPI
-                    </dt>
-                    <dd className="mt-1 text-sm text-gray-900">
-                      {paData.order.orderingProviderNPI}
-                    </dd>
-                  </div>
-                </dl>
+              <div>
+                <div className="text-xs text-gray-500">DOB</div>
+                <div>
+                  {data.order?.patient?.dob
+                    ? new Date(data.order.patient.dob).toLocaleDateString()
+                    : "—"}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500">Member ID</div>
+                <div>{data.order?.patient?.mrn ?? "—"}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500">Sex</div>
+                <div>{data.order?.patient?.sex ?? "—"}</div>
               </div>
             </div>
-          )}
+          </section>
 
-          {/* Checklist Tab */}
-          {activeTab === "checklist" && (
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Requirements Checklist
-                </h3>
-                <button
-                  onClick={handleGenerateChecklist}
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  🤖 Regenerate with LLM
-                </button>
+          <section>
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">
+              Order Details
+            </h2>
+            <div className="grid grid-cols-2 gap-4 text-sm text-gray-700">
+              <div>
+                <div className="text-xs text-gray-500">Modality</div>
+                <div>{data.order?.modality ?? "—"}</div>
               </div>
+              <div>
+                <div className="text-xs text-gray-500">Provider</div>
+                <div>{data.order?.provider?.name ?? "—"}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500">CPT Codes</div>
+                <div>{data.order?.cpt_codes.join(", ") || "—"}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500">ICD-10 Codes</div>
+                <div>{data.order?.icd10_codes.join(", ") || "—"}</div>
+              </div>
+            </div>
+          </section>
 
-              <div className="space-y-3">
-                {paData.checklist.map((item) => (
+          <section>
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">Payer</h2>
+            <div className="text-sm text-gray-700">
+              {data.payer?.name ?? "—"}
+            </div>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">
+              Checklist
+            </h2>
+            <div className="space-y-3">
+              {checklistItems.length === 0 ? (
+                <div className="text-sm text-gray-500">
+                  No checklist items yet. Generate a checklist to get started.
+                </div>
+              ) : (
+                checklistItems.map((item) => (
                   <div
                     key={item.id}
-                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50"
+                    className="border border-gray-200 rounded-lg p-3"
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`text-lg ${CHECKLIST_STATUS_COLORS[item.status as keyof typeof CHECKLIST_STATUS_COLORS]}`}
-                          >
-                            {item.status === "met"
-                              ? "✓"
-                              : item.status === "waived"
-                                ? "○"
-                                : "✗"}
-                          </span>
-                          <h4 className="text-sm font-medium text-gray-900">
-                            {item.requirement}
-                          </h4>
-                        </div>
-                        {item.notes && (
-                          <p className="mt-1 ml-7 text-sm text-gray-600">
-                            {item.notes}
-                          </p>
-                        )}
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-medium text-gray-900">
+                        {item.name}
                       </div>
-                      <select
-                        value={item.status}
-                        className="ml-4 text-sm border-gray-300 rounded-md"
-                        disabled={!isEditing}
+                      <span
+                        className={`text-xs font-semibold ${
+                          CHECKLIST_STATUS_COLOR[item.status] ?? "text-gray-500"
+                        }`}
                       >
-                        <option value="not_met">Not Met</option>
-                        <option value="met">Met</option>
-                        <option value="waived">Waived</option>
-                      </select>
+                        {CHECKLIST_STATUS_LABEL[item.status] ?? item.status}
+                      </span>
                     </div>
+                    {item.rationale && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        {item.rationale}
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-
-              <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                <div className="flex items-start">
-                  <div className="flex-shrink-0">
-                    <svg
-                      className="h-5 w-5 text-blue-400"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm text-blue-700">
-                      Complete all checklist items before submitting. Use the
-                      LLM to regenerate checklist based on latest payer
-                      policies.
-                    </p>
-                  </div>
-                </div>
-              </div>
+                ))
+              )}
             </div>
-          )}
+          </section>
 
-          {/* Medical Necessity Tab */}
-          {activeTab === "medical-necessity" && (
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Medical Necessity Summary
-                </h3>
-                <button
-                  onClick={handleGenerateMedicalNecessity}
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  🤖 Generate with LLM
-                </button>
+          <section>
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">
+              Medical Necessity Summary
+            </h2>
+            {summaries.length === 0 ? (
+              <div className="text-sm text-gray-500">
+                Generate a medical necessity narrative to populate this section.
               </div>
-
-              {paData.medicalNecessity.summary ? (
-                <div>
-                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                    <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-line">
-                      {paData.medicalNecessity.summary}
-                    </p>
-                  </div>
+            ) : (
+              summaries.map((summary) => (
+                <div key={summary.id} className="space-y-3">
                   <div className="text-xs text-gray-500">
-                    Generated: {paData.medicalNecessity.generatedDate} |
-                    Version: {paData.medicalNecessity.version}
+                    Version {summary.version} · {formatDate(summary.created_at)}
                   </div>
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <svg
-                    className="mx-auto h-12 w-12 text-gray-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">
-                    No medical necessity summary
-                  </h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Generate a clinical narrative using our AI assistant
-                  </p>
-                  <div className="mt-6">
-                    <button
-                      onClick={handleGenerateMedicalNecessity}
-                      className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-                    >
-                      Generate Summary
-                    </button>
+                  <div className="text-sm text-gray-700 whitespace-pre-line">
+                    {summary.medical_necessity_text}
                   </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Attachments Tab */}
-          {activeTab === "attachments" && (
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Attached Documents
-                </h3>
-                <button className="px-3 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
-                  📎 Upload Document
-                </button>
-              </div>
-
-              {paData.attachments.length > 0 ? (
-                <div className="space-y-3">
-                  {paData.attachments.map((attachment) => (
-                    <div
-                      key={attachment.id}
-                      className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 flex-1">
-                          <svg
-                            className="h-8 w-8 text-red-500"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                            />
-                          </svg>
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-900">
-                              {attachment.filename}
-                            </h4>
-                            <p className="text-xs text-gray-500">
-                              {attachment.fileType.replace("_", " ")} •{" "}
-                              {attachment.size} • Uploaded{" "}
-                              {attachment.uploadedDate} by{" "}
-                              {attachment.uploadedBy}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <button className="text-sm text-blue-600 hover:text-blue-800">
-                            Download
-                          </button>
-                          <button className="text-sm text-red-600 hover:text-red-800">
-                            Delete
-                          </button>
-                        </div>
-                      </div>
+                  {summary.indications_text && (
+                    <div className="text-sm text-gray-700 whitespace-pre-line">
+                      <strong>Indications:</strong> {summary.indications_text}
                     </div>
-                  ))}
+                  )}
+                  {summary.risk_benefit_text && (
+                    <div className="text-sm text-gray-700 whitespace-pre-line">
+                      <strong>Risk / Benefit:</strong>{" "}
+                      {summary.risk_benefit_text}
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="text-center py-12">
-                  <svg
-                    className="mx-auto h-12 w-12 text-gray-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-                    />
-                  </svg>
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">
-                    No attachments
-                  </h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Upload clinical notes, imaging reports, and other documents
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* History Tab */}
-          {activeTab === "history" && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Activity History
-              </h3>
-
-              <div className="flow-root">
-                <ul className="-mb-8">
-                  {paData.history.map((event, eventIdx) => (
-                    <li key={event.id}>
-                      <div className="relative pb-8">
-                        {eventIdx !== paData.history.length - 1 ? (
-                          <span
-                            className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
-                            aria-hidden="true"
-                          />
-                        ) : null}
-                        <div className="relative flex space-x-3">
-                          <div>
-                            <span className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center ring-8 ring-white">
-                              <svg
-                                className="h-5 w-5 text-white"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                              >
-                                <path
-                                  fillRule="evenodd"
-                                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
-                                  clipRule="evenodd"
-                                />
-                              </svg>
-                            </span>
-                          </div>
-                          <div className="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">
-                                {event.action}
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                {event.details}
-                              </p>
-                              <p className="text-xs text-gray-400 mt-1">
-                                by {event.user}
-                              </p>
-                            </div>
-                            <div className="whitespace-nowrap text-right text-sm text-gray-500">
-                              {event.date}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          )}
+              ))
+            )}
+          </section>
         </div>
+
+        <aside className="bg-white rounded-lg shadow p-6 space-y-4">
+          <section>
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">
+              Timeline
+            </h3>
+            <ol className="relative border-l border-gray-200 text-sm text-gray-700">
+              {timeline.length === 0 ? (
+                <li className="ml-4">No status events yet.</li>
+              ) : (
+                timeline.map((event) => (
+                  <li key={event.id} className="mb-4 ml-4">
+                    <div className="absolute w-2 h-2 bg-blue-500 rounded-full left-[-5px] mt-1.5" />
+                    <time className="text-xs text-gray-500">
+                      {formatDate(event.at)}
+                    </time>
+                    <div className="text-sm font-medium text-gray-900">
+                      {event.status.replace("_", " ")}
+                    </div>
+                    {event.note && (
+                      <div className="text-xs text-gray-500">{event.note}</div>
+                    )}
+                  </li>
+                ))
+              )}
+            </ol>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">
+              Attachments
+            </h3>
+            <div className="text-sm text-gray-600">
+              Upload and manage supporting documentation from the Attachments
+              tab.
+            </div>
+          </section>
+        </aside>
       </div>
     </div>
   );

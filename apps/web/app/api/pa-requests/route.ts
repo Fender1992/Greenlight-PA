@@ -6,11 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPARequestsByOrg, createPARequest } from "@greenlight/db";
 import type { Database } from "@greenlight/db/types/database";
-import {
-  HttpError,
-  requireUser,
-  resolveOrgId,
-} from "../_lib/org";
+import { HttpError, requireUser, resolveOrgId } from "../_lib/org";
 
 type PARequestInsert = Database["public"]["Tables"]["pa_request"]["Insert"];
 
@@ -81,10 +77,7 @@ export async function POST(request: NextRequest) {
     const orgId = await resolveOrgId(org_id);
 
     if (!order_id || !payer_id) {
-      throw new HttpError(
-        400,
-        "Missing required fields: order_id, payer_id"
-      );
+      throw new HttpError(400, "Missing required fields: order_id, payer_id");
     }
 
     const paRequest: PARequestInsert = {

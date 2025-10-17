@@ -49,6 +49,7 @@ export default function MetricsPage() {
   const payerBreakdown = useMemo(() => {
     if (!metrics) return [] as Array<{ id: string; count: number }>;
     return Object.entries(metrics.payerCounts)
+      .filter(([id]) => Boolean(id))
       .map(([id, count]) => ({ id, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
@@ -144,7 +145,10 @@ export default function MetricsPage() {
                     ? Math.round((count / metrics.overall.totalRequests) * 100)
                     : 0;
                   return (
-                    <div key={status} className="flex items-center justify-between">
+                    <div
+                      key={status}
+                      className="flex items-center justify-between"
+                    >
                       <div>
                         <div className="text-sm font-medium text-gray-900">
                           {status.replace("_", " ")}
@@ -202,7 +206,10 @@ export default function MetricsPage() {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {metrics.trends.map((item) => (
-                <div key={item.month} className="p-4 border border-gray-200 rounded-lg">
+                <div
+                  key={item.month}
+                  className="p-4 border border-gray-200 rounded-lg"
+                >
                   <div className="text-sm text-gray-500">{item.month}</div>
                   <div className="text-2xl font-bold text-gray-900">
                     {item.requests}

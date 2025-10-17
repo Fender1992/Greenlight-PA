@@ -46,7 +46,7 @@ export default function AuditLogViewer() {
     queryFn: async () => {
       const response = await apiGet<AuditLogResponse>("/api/audit?limit=200");
       if (!response.success) {
-        throw new Error(response.error as string);
+        throw new Error(response.error || "Failed to load audit log");
       }
       return response;
     },
@@ -75,8 +75,7 @@ export default function AuditLogViewer() {
       total: logs.length,
       paRequests: logs.filter((log) => log.subject === "pa_request").length,
       attachments: logs.filter((log) => log.subject === "attachment").length,
-      uniqueUsers: new Set(logs.map((log) => log.user_id).filter(Boolean))
-        .size,
+      uniqueUsers: new Set(logs.map((log) => log.user_id).filter(Boolean)).size,
     };
   }, [logs]);
 
@@ -116,9 +115,7 @@ export default function AuditLogViewer() {
   return (
     <div>
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          Audit Log
-        </h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Audit Log</h3>
         <p className="text-sm text-gray-600">
           All system actions are logged for security and compliance. Logs are
           retained according to retention policy.
@@ -211,7 +208,10 @@ export default function AuditLogViewer() {
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredLogs.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                <td
+                  colSpan={5}
+                  className="px-6 py-12 text-center text-gray-500"
+                >
                   No audit events match the selected filters.
                 </td>
               </tr>
@@ -250,7 +250,9 @@ export default function AuditLogViewer() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-sm text-gray-500">Events (30d)</div>
-          <div className="text-2xl font-bold text-gray-900">{summary.total}</div>
+          <div className="text-2xl font-bold text-gray-900">
+            {summary.total}
+          </div>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-sm text-gray-500">PA Activity</div>

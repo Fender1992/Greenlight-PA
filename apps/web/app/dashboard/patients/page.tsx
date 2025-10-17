@@ -73,7 +73,9 @@ export default function PatientsPage() {
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {isLoading ? (
-          <div className="py-12 text-center text-gray-500">Loading patients…</div>
+          <div className="py-12 text-center text-gray-500">
+            Loading patients…
+          </div>
         ) : isError ? (
           <div className="py-12 text-center text-red-600">
             {(error as Error)?.message || "Failed to load patients"}
@@ -152,7 +154,9 @@ export default function PatientsPage() {
       <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-sm text-gray-500">Total Patients</div>
-          <div className="text-2xl font-bold text-gray-900">{patients.length}</div>
+          <div className="text-2xl font-bold text-gray-900">
+            {patients.length}
+          </div>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-sm text-gray-500">With MRN</div>

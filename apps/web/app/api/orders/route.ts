@@ -6,11 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOrdersByOrg, createOrder } from "@greenlight/db";
 import type { Database } from "@greenlight/db/types/database";
-import {
-  HttpError,
-  requireUser,
-  resolveOrgId,
-} from "../_lib/org";
+import { HttpError, requireUser, resolveOrgId } from "../_lib/org";
 
 type OrderInsert = Database["public"]["Tables"]["order"]["Insert"];
 

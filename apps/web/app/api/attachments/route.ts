@@ -4,10 +4,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { supabase, getCurrentUser } from "@greenlight/db";
+import { supabase } from "@greenlight/db";
 import type { Database } from "@greenlight/db";
 import crypto from "crypto";
-import { HttpError, resolveOrgId } from "../_lib/org";
+import { HttpError, requireUser, resolveOrgId } from "../_lib/org";
 
 /**
  * POST /api/attachments
@@ -25,25 +25,19 @@ import { HttpError, resolveOrgId } from "../_lib/org";
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const user = await requireUser();
 
     // Parse multipart form data
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
-    const orgId = formData.get("org_id") as string | null;
+    const orgId = await resolveOrgId(formData.get("org_id") as string | null);
     const type = formData.get("type") as string | null;
 
-    if (!file || !orgId || !type) {
+    if (!file || !type) {
       return NextResponse.json(
         {
           success: false,
-          error: "Missing required fields: file, org_id, type",
+          error: "Missing required fields: file, type",
         },
         { status: 400 }
       );
@@ -152,13 +146,7 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    await requireUser();
 
     const { searchParams } = new URL(request.url);
     const orgId = await resolveOrgId(searchParams.get("org_id"));

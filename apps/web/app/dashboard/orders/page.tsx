@@ -17,9 +17,8 @@ export default function OrdersPage() {
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["orders"],
     queryFn: async () => {
-      const response = await apiGet<ApiResponse<OrderWithRelations[]>>(
-        "/api/orders"
-      );
+      const response =
+        await apiGet<ApiResponse<OrderWithRelations[]>>("/api/orders");
       if (!response.success) {
         throw new Error(response.error || "Failed to load orders");
       }
@@ -82,9 +81,7 @@ export default function OrdersPage() {
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {isLoading ? (
-          <div className="py-12 text-center text-gray-500">
-            Loading orders…
-          </div>
+          <div className="py-12 text-center text-gray-500">Loading orders…</div>
         ) : isError ? (
           <div className="py-12 text-center text-red-600">
             {(error as Error)?.message || "Failed to load orders"}
@@ -144,7 +141,9 @@ export default function OrdersPage() {
                       {order.provider?.name || "—"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{order.modality}</div>
+                      <div className="text-sm text-gray-900">
+                        {order.modality}
+                      </div>
                       <div className="text-xs text-gray-500">
                         CPT: {order.cpt_codes.join(", ")}
                       </div>
@@ -174,7 +173,9 @@ export default function OrdersPage() {
       <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-sm text-gray-500">Total Orders</div>
-          <div className="text-2xl font-bold text-gray-900">{orders.length}</div>
+          <div className="text-2xl font-bold text-gray-900">
+            {orders.length}
+          </div>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
           <div className="text-sm text-gray-500">Unique Patients</div>

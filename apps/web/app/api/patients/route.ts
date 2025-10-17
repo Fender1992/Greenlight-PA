@@ -85,9 +85,7 @@ export async function POST(request: NextRequest) {
       {
         success: false,
         error:
-          error instanceof Error
-            ? error.message
-            : "Failed to create patient",
+          error instanceof Error ? error.message : "Failed to create patient",
       },
       { status: 500 }
     );

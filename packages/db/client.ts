@@ -72,7 +72,7 @@ function getSupabaseJwtSecret(): string {
 export const supabase = new Proxy(
   {} as ReturnType<typeof createClient<Database>>,
   {
-    get(target, prop) {
+    get(_target, prop) {
       if (!_supabase) {
         const url = getSupabaseUrl();
         const key = getSupabaseAnonKey();
@@ -103,7 +103,7 @@ export const supabase = new Proxy(
 export const supabaseAdmin = new Proxy(
   {} as ReturnType<typeof createClient<Database>>,
   {
-    get(target, prop) {
+    get(_target, prop) {
       if (!_supabaseAdmin) {
         const url = getSupabaseUrl();
         const key = getSupabaseServiceKey();

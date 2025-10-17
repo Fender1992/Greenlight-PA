@@ -60,9 +60,7 @@ export async function POST(request: NextRequest) {
       name: body.name,
       portal_url: body.portal_url ?? null,
       contact: body.contact ?? null,
-      policy_links: Array.isArray(body.policy_links)
-        ? body.policy_links
-        : [],
+      policy_links: Array.isArray(body.policy_links) ? body.policy_links : [],
     };
 
     const { data, error } = await supabase
@@ -75,10 +73,7 @@ export async function POST(request: NextRequest) {
       throw new HttpError(500, error.message);
     }
 
-    return NextResponse.json(
-      { success: true, data },
-      { status: 201 }
-    );
+    return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (error) {
     if (error instanceof HttpError) {
       return NextResponse.json(
@@ -92,9 +87,7 @@ export async function POST(request: NextRequest) {
       {
         success: false,
         error:
-          error instanceof Error
-            ? error.message
-            : "Failed to create payer",
+          error instanceof Error ? error.message : "Failed to create payer",
       },
       { status: 500 }
     );

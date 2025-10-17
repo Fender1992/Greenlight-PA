@@ -29,18 +29,11 @@ export default function WorklistPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const {
-    data,
-    isLoading,
-    isError,
-    error,
-    refetch,
-  } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["pa-requests"],
     queryFn: async () => {
-      const response = await apiGet<ApiResponse<PaRequestWithRelations[]>>(
-        "/api/pa-requests"
-      );
+      const response =
+        await apiGet<ApiResponse<PaRequestWithRelations[]>>("/api/pa-requests");
       if (!response.success) {
         throw new Error(response.error || "Failed to load worklist");
       }
@@ -53,7 +46,8 @@ export default function WorklistPage() {
   const filteredRequests = useMemo(() => {
     const query = searchQuery.toLowerCase();
     return paRequests.filter((req) => {
-      const matchesStatus = statusFilter === "all" || req.status === statusFilter;
+      const matchesStatus =
+        statusFilter === "all" || req.status === statusFilter;
       const patientName = req.order?.patient?.name ?? "";
       const modality = req.order?.modality ?? "";
       const matchesSearch =

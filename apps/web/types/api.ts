@@ -8,7 +8,8 @@ export type ProviderRow = Db["public"]["Tables"]["provider"]["Row"];
 export type PayerRow = Db["public"]["Tables"]["payer"]["Row"];
 export type OrgRow = Db["public"]["Tables"]["org"]["Row"];
 export type PaRequestRow = Db["public"]["Tables"]["pa_request"]["Row"];
-export type ChecklistItemRow = Db["public"]["Tables"]["pa_checklist_item"]["Row"];
+export type ChecklistItemRow =
+  Db["public"]["Tables"]["pa_checklist_item"]["Row"];
 export type PaSummaryRow = Db["public"]["Tables"]["pa_summary"]["Row"];
 export type StatusEventRow = Db["public"]["Tables"]["status_event"]["Row"];
 export type AuditLogRow = Db["public"]["Tables"]["audit_log"]["Row"];
@@ -44,6 +45,7 @@ export interface MetricsResponse {
 
 export interface AuditLogResponse {
   success: boolean;
+  error?: string;
   data: AuditLogRow[];
   pagination: {
     total: number;

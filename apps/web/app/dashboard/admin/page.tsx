@@ -1,11 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPatch, apiPost, ApiResponse } from "@web/lib/api";
 import type { OrgRow, PayerRow } from "@web/types/api";
 import AuditLogViewer from "./audit-viewer";
@@ -41,8 +37,20 @@ export default function AdminPage() {
   });
 
   const createPayerMutation = useMutation({
-    mutationFn: (payload: { name: string; portal_url?: string; contact?: string }) =>
-      apiPost<ApiResponse<PayerRow>>("/api/payers", payload),
+    mutationFn: async (payload: {
+      name: string;
+      portal_url?: string;
+      contact?: string;
+    }) => {
+      const response = await apiPost<ApiResponse<PayerRow>>(
+        "/api/payers",
+        payload
+      );
+      if (!response.success) {
+        throw new Error(response.error || "Failed to create payer");
+      }
+      return response.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payers"] });
       setShowPayerForm(false);
@@ -50,8 +58,13 @@ export default function AdminPage() {
   });
 
   const updateOrgMutation = useMutation({
-    mutationFn: (payload: Partial<OrgRow>) =>
-      apiPatch<ApiResponse<OrgRow>>("/api/org", payload),
+    mutationFn: async (payload: Partial<OrgRow>) => {
+      const response = await apiPatch<ApiResponse<OrgRow>>("/api/org", payload);
+      if (!response.success) {
+        throw new Error(response.error || "Failed to update organization");
+      }
+      return response.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["org"] });
     },
@@ -184,21 +197,23 @@ export default function AdminPage() {
                   <div className="flex justify-end">
                     <button
                       type="submit"
-                      disabled={createPayerMutation.isLoading}
+                      disabled={createPayerMutation.isPending}
                       className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
                     >
-                      {createPayerMutation.isLoading ? "Saving…" : "Save Payer"}
+                      {createPayerMutation.isPending ? "Saving…" : "Save Payer"}
                     </button>
                   </div>
                 </form>
               )}
 
               <div className="space-y-3">
-                {(payersQuery.data ?? []).length === 0 && !payersQuery.isLoading && (
-                  <div className="text-sm text-gray-500">
-                    No payers configured yet. Add your payers to track policy references.
-                  </div>
-                )}
+                {(payersQuery.data ?? []).length === 0 &&
+                  !payersQuery.isLoading && (
+                    <div className="text-sm text-gray-500">
+                      No payers configured yet. Add your payers to track policy
+                      references.
+                    </div>
+                  )}
 
                 {filteredPayers.map((payer) => (
                   <div
@@ -212,7 +227,11 @@ export default function AdminPage() {
                         </div>
                         {payer.portal_url && (
                           <div className="text-xs text-blue-600">
-                            <a href={payer.portal_url} target="_blank" rel="noreferrer">
+                            <a
+                              href={payer.portal_url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
                               {payer.portal_url}
                             </a>
                           </div>
@@ -236,10 +255,13 @@ export default function AdminPage() {
           {activeTab === "settings" && (
             <div>
               {orgQuery.isLoading ? (
-                <div className="text-sm text-gray-500">Loading organization…</div>
+                <div className="text-sm text-gray-500">
+                  Loading organization…
+                </div>
               ) : orgQuery.isError || !orgQuery.data ? (
                 <div className="text-sm text-red-600">
-                  {(orgQuery.error as Error)?.message || "Unable to load organization"}
+                  {(orgQuery.error as Error)?.message ||
+                    "Unable to load organization"}
                 </div>
               ) : (
                 <form className="space-y-4" onSubmit={handleUpdateOrg}>
@@ -279,10 +301,10 @@ export default function AdminPage() {
                   <div className="flex justify-end">
                     <button
                       type="submit"
-                      disabled={updateOrgMutation.isLoading}
+                      disabled={updateOrgMutation.isPending}
                       className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
                     >
-                      {updateOrgMutation.isLoading ? "Saving…" : "Save Changes"}
+                      {updateOrgMutation.isPending ? "Saving…" : "Save Changes"}
                     </button>
                   </div>
                 </form>
@@ -293,13 +315,16 @@ export default function AdminPage() {
           {activeTab === "users" && (
             <div className="text-sm text-gray-600 space-y-2">
               <p>
-                User management is handled via Supabase Auth. Invite new users or
-                update roles from the Supabase dashboard.
+                User management is handled via Supabase Auth. Invite new users
+                or update roles from the Supabase dashboard.
               </p>
               <p>
-                Ensure each user is assigned to the appropriate organization via the
-                <code className="px-1 py-0.5 bg-gray-100 rounded ml-1">member</code> table to grant
-                access to protected resources.
+                Ensure each user is assigned to the appropriate organization via
+                the
+                <code className="px-1 py-0.5 bg-gray-100 rounded ml-1">
+                  member
+                </code>{" "}
+                table to grant access to protected resources.
               </p>
             </div>
           )}
