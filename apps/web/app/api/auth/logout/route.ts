@@ -11,7 +11,7 @@ import { supabase } from "@greenlight/db";
  *
  * Signs out the current user
  */
-export async function POST(request: Request) {
+export async function POST(_request: Request) {
   try {
     const { error } = await supabase.auth.signOut();
 
