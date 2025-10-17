@@ -1,0 +1,20 @@
+{
+  "name": "@greenlight/pdfkit",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "pdfkit": "^0.15.1",
+    "@types/pdfkit": "^0.13.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5",
+    "vitest": "^2.1.8"
+  }
+}
