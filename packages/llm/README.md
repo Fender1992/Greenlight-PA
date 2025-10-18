@@ -35,7 +35,7 @@ CACHEGPT_API_KEY=cgpt_sk_...
 CacheGPT provides caching and cost optimization for Anthropic API calls. To use it:
 
 1. Set `CACHEGPT_API_KEY` to your CacheGPT key (starts with `cgpt_sk_...`)
-2. The SDK will automatically route requests through `https://api.cachegpt.com/v1`
+2. The SDK will automatically route requests through `https://cachegpt.app/v1`
 3. Your CacheGPT proxy handles caching and forwards to Anthropic API
 
 **Using Direct Anthropic API:**
