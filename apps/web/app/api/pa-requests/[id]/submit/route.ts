@@ -4,11 +4,9 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getCurrentUser,
-  supabase,
-  updatePARequestStatus,
-} from "@greenlight/db";
+import { supabaseAdmin } from "@greenlight/db";
+import { updatePARequestStatus } from "@greenlight/db/queries";
+import { getOrgContext, HttpError } from "../../../_lib/org";
 
 /**
  * POST /api/pa-requests/[id]/submit
@@ -26,18 +24,11 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
     const { id } = params;
+    const { user } = await getOrgContext(request, null);
 
     // Get PA request
-    const { data: paRequest, error: paError } = await supabase
+    const { data: paRequest, error: paError } = await supabaseAdmin
       .from("pa_request")
       .select("*")
       .eq("id", id)
@@ -49,6 +40,8 @@ export async function POST(
         { status: 404 }
       );
     }
+
+    await getOrgContext(request, paRequest.org_id);
 
     // Check if already submitted
     if (paRequest.status !== "draft") {
@@ -62,7 +55,7 @@ export async function POST(
     }
 
     // Validate checklist items
-    const { data: checklistItems, error: checklistError } = await supabase
+    const { data: checklistItems, error: checklistError } = await supabaseAdmin
       .from("pa_checklist_item")
       .select("*")
       .eq("pa_request_id", id);
@@ -97,7 +90,7 @@ export async function POST(
     }
 
     // Validate medical necessity summary exists
-    const { data: summaries, error: summaryError } = await supabase
+    const { data: summaries, error: summaryError } = await supabaseAdmin
       .from("pa_summary")
       .select("*")
       .eq("pa_request_id", id)
@@ -116,9 +109,11 @@ export async function POST(
 
     // Update status to 'submitted'
     const result = await updatePARequestStatus(
+      supabaseAdmin,
       id,
       "submitted",
-      "PA request submitted for review"
+      "PA request submitted for review",
+      user.id
     );
 
     if (!result.success) {
@@ -129,7 +124,7 @@ export async function POST(
     }
 
     // Update submitted_at timestamp
-    const { error: timestampError } = await supabase
+    const { error: timestampError } = await supabaseAdmin
       .from("pa_request")
       .update({ submitted_at: new Date().toISOString() })
       .eq("id", id);
@@ -146,6 +141,13 @@ export async function POST(
       },
     });
   } catch (error) {
+    if (error instanceof HttpError) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: error.status }
+      );
+    }
+
     console.error("PA request submission error:", error);
     return NextResponse.json(
       {

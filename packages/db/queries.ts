@@ -9,6 +9,7 @@ import {
   getCurrentUser,
   getUserOrgIds,
 } from "./client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./types/database";
 
 type Tables = Database["public"]["Tables"];
@@ -314,14 +315,14 @@ export async function createPARequest(
 }
 
 export async function updatePARequestStatus(
+  client: SupabaseClient<Database>,
   paId: string,
   status: Database["public"]["Enums"]["pa_status"],
-  note?: string
+  note?: string,
+  actorId?: string | null
 ) {
-  const user = await getCurrentUser();
-
   // Update PA request status
-  const { data: paData, error: paError } = await supabase
+  const { data: paData, error: paError } = await client
     .from("pa_request")
     .update({ status })
     .eq("id", paId)
@@ -333,11 +334,11 @@ export async function updatePARequestStatus(
   }
 
   // Create status event
-  const { error: eventError } = await supabase.from("status_event").insert({
+  const { error: eventError } = await client.from("status_event").insert({
     pa_request_id: paId,
     status,
     note,
-    actor: user?.id || null,
+    actor: actorId ?? null,
   });
 
   if (eventError) {

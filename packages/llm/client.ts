@@ -7,9 +7,12 @@ import Anthropic from "@anthropic-ai/sdk";
 
 /**
  * Anthropic Claude Client
+ * Uses ANTHROPIC_API_KEY from Supabase environment variables
+ * Can be configured to use CacheGPT or direct Anthropic API
  */
 export const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || "",
+  baseURL: process.env.ANTHROPIC_BASE_URL || undefined,
 });
 
 /**
