@@ -31,7 +31,17 @@ export default function LoginPage() {
 
       if (error) throw error;
 
-      if (data.user) {
+      if (data.session) {
+        // Set session cookies for API routes
+        await fetch("/api/auth/set-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            accessToken: data.session.access_token,
+            refreshToken: data.session.refresh_token,
+          }),
+        });
+
         // Redirect to dashboard after successful login
         router.push("/dashboard");
       }
