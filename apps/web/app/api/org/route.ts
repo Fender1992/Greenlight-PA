@@ -3,7 +3,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@greenlight/db";
+import { supabaseAdmin } from "@greenlight/db";
 import type { Database } from "@greenlight/db/types/database";
 import { HttpError, requireUser, resolveOrgId } from "../_lib/org";
 
@@ -11,10 +11,10 @@ type OrgUpdate = Database["public"]["Tables"]["org"]["Update"];
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await requireUser(request);
+    const { user } = await requireUser(request);
     const orgId = await resolveOrgId(user, null);
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("org")
       .select("*")
       .eq("id", orgId)
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const user = await requireUser(request);
+    const { user } = await requireUser(request);
     const orgId = await resolveOrgId(user, null);
     const body = await request.json();
 
@@ -59,7 +59,7 @@ export async function PATCH(request: NextRequest) {
       address: body.address ?? null,
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("org")
       .update(updates)
       .eq("id", orgId)

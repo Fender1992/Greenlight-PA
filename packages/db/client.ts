@@ -121,6 +121,27 @@ export const supabaseAdmin = new Proxy(
 );
 
 /**
+ * Utility: Create a Supabase client that scopes requests to a specific JWT.
+ * This is useful for server-side handlers that need to enforce RLS using the
+ * end-user's access token without persisting sessions.
+ */
+export function createScopedSupabase(token: string) {
+  const url = getSupabaseUrl();
+  const anonKey = getSupabaseAnonKey();
+  return createClient<Database>(url, anonKey, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+}
+
+/**
  * Helper: Get current user's org IDs
  */
 export async function getUserOrgIds(userId: string): Promise<string[]> {

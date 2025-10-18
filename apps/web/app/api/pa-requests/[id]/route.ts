@@ -4,15 +4,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getCurrentUser,
-  getPARequestById,
-  updatePARequestStatus,
-} from "@greenlight/db";
-import { supabase } from "@greenlight/db";
+import { supabaseAdmin } from "@greenlight/db";
 import type { Database } from "@greenlight/db/types/database";
+import { HttpError, requireUser, resolveOrgId } from "../../_lib/org";
 
-type PAStatus = Database["public"]["Enums"]["pa_status"];
 type PaRequestRow = Database["public"]["Tables"]["pa_request"]["Row"];
 type PaRequestUpdate = Partial<Pick<PaRequestRow, "priority">>;
 
@@ -30,26 +25,49 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
     const { id } = params;
-    const result = await getPARequestById(id);
+    const { user } = await requireUser(request);
 
-    if (!result.success) {
+    const { data, error } = await supabaseAdmin
+      .from("pa_request")
+      .select(
+        `
+        *,
+        order:order_id(
+          *,
+          patient:patient_id(*),
+          provider:provider_id(*)
+        ),
+        payer:payer_id(*),
+        checklist_items:pa_checklist_item(*),
+        summaries:pa_summary(*),
+        status_events:status_event(*)
+      `
+      )
+      .eq("id", id)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        return NextResponse.json(
+          { success: false, error: "PA request not found" },
+          { status: 404 }
+        );
+      }
+      throw new HttpError(500, error.message);
+    }
+
+    await resolveOrgId(user, data.org_id);
+
+    return NextResponse.json({ success: true, data });
+  } catch (error) {
+    if (error instanceof HttpError) {
       return NextResponse.json(
-        { success: false, error: result.error },
-        { status: 404 }
+        { success: false, error: error.message },
+        { status: error.status }
       );
     }
 
-    return NextResponse.json({ success: true, data: result.data });
-  } catch (error) {
     console.error("PA request get error:", error);
     return NextResponse.json(
       {
@@ -77,14 +95,6 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
     const { id } = params;
     const body = await request.json();
     const {
@@ -97,16 +107,49 @@ export async function PATCH(
       priority?: PaRequestRow["priority"];
     } = body;
 
-    // If status is being updated, use updatePARequestStatus helper
+    const { data: paRecord, error: fetchError } = await supabaseAdmin
+      .from("pa_request")
+      .select("org_id")
+      .eq("id", id)
+      .single();
+
+    if (fetchError || !paRecord) {
+      throw new HttpError(404, "PA request not found");
+    }
+
+    const { user } = await requireUser(request);
+    await resolveOrgId(user, paRecord.org_id);
+
+    // If status is being updated, handle via service role client
     if (status) {
-      const result = await updatePARequestStatus(id, status as PAStatus, note);
-      if (!result.success) {
-        return NextResponse.json(
-          { success: false, error: result.error },
-          { status: 500 }
+      const { data: updated, error: statusError } = await supabaseAdmin
+        .from("pa_request")
+        .update({ status })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (statusError || !updated) {
+        throw new HttpError(
+          500,
+          statusError?.message || "Status update failed"
         );
       }
-      return NextResponse.json({ success: true, data: result.data });
+
+      const { error: eventError } = await supabaseAdmin
+        .from("status_event")
+        .insert({
+          pa_request_id: id,
+          status,
+          note,
+          actor: user.id,
+        });
+
+      if (eventError) {
+        console.error("Failed to create status event:", eventError);
+      }
+
+      return NextResponse.json({ success: true, data: updated });
     }
 
     // Otherwise, update other fields directly
@@ -128,7 +171,7 @@ export async function PATCH(
       );
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from("pa_request")
       .update(updates)
       .eq("id", id);
@@ -140,15 +183,30 @@ export async function PATCH(
       );
     }
 
-    const updated = await getPARequestById(id);
-    if (!updated.success) {
-      return NextResponse.json(
-        { success: false, error: updated.error },
-        { status: 500 }
-      );
+    const { data: updated, error: refetchError } = await supabaseAdmin
+      .from("pa_request")
+      .select(
+        `
+        *,
+        order:order_id(
+          *,
+          patient:patient_id(*),
+          provider:provider_id(*)
+        ),
+        payer:payer_id(*),
+        checklist_items:pa_checklist_item(*),
+        summaries:pa_summary(*),
+        status_events:status_event(*)
+      `
+      )
+      .eq("id", id)
+      .single();
+
+    if (refetchError || !updated) {
+      throw new HttpError(500, refetchError?.message || "Failed to fetch PA");
     }
 
-    return NextResponse.json({ success: true, data: updated.data });
+    return NextResponse.json({ success: true, data: updated });
   } catch (error) {
     console.error("PA request update error:", error);
     return NextResponse.json(
@@ -170,17 +228,24 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
+    const { id } = params;
+    const { data: paRecord, error: fetchError } = await supabaseAdmin
+      .from("pa_request")
+      .select("org_id")
+      .eq("id", id)
+      .single();
+
+    if (fetchError || !paRecord) {
+      throw new HttpError(404, "PA request not found");
     }
 
-    const { id } = params;
+    const { user } = await requireUser(request);
+    await resolveOrgId(user, paRecord.org_id);
 
-    const { error } = await supabase.from("pa_request").delete().eq("id", id);
+    const { error } = await supabaseAdmin
+      .from("pa_request")
+      .delete()
+      .eq("id", id);
 
     if (error) {
       return NextResponse.json(
@@ -194,6 +259,13 @@ export async function DELETE(
       data: { id, deleted: true },
     });
   } catch (error) {
+    if (error instanceof HttpError) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: error.status }
+      );
+    }
+
     console.error("PA request delete error:", error);
     return NextResponse.json(
       {

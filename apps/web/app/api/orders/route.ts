@@ -4,9 +4,9 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getOrdersByOrg, createOrder } from "@greenlight/db";
+import { supabaseAdmin } from "@greenlight/db";
 import type { Database } from "@greenlight/db/types/database";
-import { HttpError, requireUser, resolveOrgId } from "../_lib/org";
+import { HttpError, getOrgContext } from "../_lib/org";
 
 type OrderInsert = Database["public"]["Tables"]["order"]["Insert"];
 
@@ -17,19 +17,25 @@ type OrderInsert = Database["public"]["Tables"]["order"]["Insert"];
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const user = await requireUser(request);
-    const orgId = await resolveOrgId(user, searchParams.get("org_id"));
+    const { orgId } = await getOrgContext(request, searchParams.get("org_id"));
 
-    const result = await getOrdersByOrg(orgId);
+    const { data, error } = await supabaseAdmin
+      .from("order")
+      .select(
+        `
+        *,
+        patient:patient_id(*),
+        provider:provider_id(*)
+      `
+      )
+      .eq("org_id", orgId)
+      .order("created_at", { ascending: false });
 
-    if (!result.success) {
-      return NextResponse.json(
-        { success: false, error: result.error },
-        { status: 403 }
-      );
+    if (error) {
+      throw new HttpError(500, error.message);
     }
 
-    return NextResponse.json({ success: true, data: result.data });
+    return NextResponse.json({ success: true, data });
   } catch (error) {
     if (error instanceof HttpError) {
       return NextResponse.json(
@@ -66,11 +72,9 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireUser(request);
-
     const body = await request.json();
+    const { orgId } = await getOrgContext(request, body.org_id ?? null);
     const {
-      org_id,
       patient_id,
       provider_id,
       modality,
@@ -78,8 +82,6 @@ export async function POST(request: NextRequest) {
       icd10_codes,
       clinic_notes_text,
     } = body;
-
-    const orgId = await resolveOrgId(user, org_id);
 
     if (
       !patient_id ||
@@ -116,19 +118,20 @@ export async function POST(request: NextRequest) {
       clinic_notes_text: clinic_notes_text || null,
     };
 
-    const result = await createOrder(order);
+    const { data, error } = await supabaseAdmin
+      .from("order")
+      .insert(order)
+      .select()
+      .single();
 
-    if (!result.success) {
-      return NextResponse.json(
-        { success: false, error: result.error },
-        { status: result.error.includes("access") ? 403 : 500 }
+    if (error) {
+      throw new HttpError(
+        error.message.includes("access") ? 403 : 500,
+        error.message
       );
     }
 
-    return NextResponse.json(
-      { success: true, data: result.data },
-      { status: 201 }
-    );
+    return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (error) {
     if (error instanceof HttpError) {
       return NextResponse.json(

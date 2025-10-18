@@ -3,25 +3,28 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getPatientsByOrg, createPatient } from "@greenlight/db";
+import { supabaseAdmin } from "@greenlight/db";
 import type { Database } from "@greenlight/db/types/database";
-import { HttpError, requireUser, resolveOrgId } from "../_lib/org";
+import { HttpError, getOrgContext } from "../_lib/org";
 
 type PatientInsert = Database["public"]["Tables"]["patient"]["Insert"];
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const user = await requireUser(request);
-    const orgId = await resolveOrgId(user, searchParams.get("org_id"));
+    const { orgId } = await getOrgContext(request, searchParams.get("org_id"));
 
-    const result = await getPatientsByOrg(orgId);
+    const { data, error } = await supabaseAdmin
+      .from("patient")
+      .select("*")
+      .eq("org_id", orgId)
+      .order("name", { ascending: true });
 
-    if (!result.success) {
-      throw new HttpError(500, result.error);
+    if (error) {
+      throw new HttpError(500, error.message);
     }
 
-    return NextResponse.json({ success: true, data: result.data });
+    return NextResponse.json({ success: true, data });
   } catch (error) {
     if (error instanceof HttpError) {
       return NextResponse.json(
@@ -44,10 +47,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireUser(request);
     const body = await request.json();
-
-    const orgId = await resolveOrgId(user, body.org_id ?? null);
+    const { orgId } = await getOrgContext(request, body.org_id ?? null);
 
     const patient: PatientInsert = {
       org_id: orgId,
@@ -63,15 +64,17 @@ export async function POST(request: NextRequest) {
       throw new HttpError(400, "Patient name is required");
     }
 
-    const result = await createPatient(patient);
-    if (!result.success) {
-      throw new HttpError(500, result.error);
+    const { data, error } = await supabaseAdmin
+      .from("patient")
+      .insert(patient)
+      .select()
+      .single();
+
+    if (error) {
+      throw new HttpError(500, error.message);
     }
 
-    return NextResponse.json(
-      { success: true, data: result.data },
-      { status: 201 }
-    );
+    return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (error) {
     if (error instanceof HttpError) {
       return NextResponse.json(

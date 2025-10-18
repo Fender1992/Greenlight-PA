@@ -1,4 +1,4 @@
-import { supabase } from "@greenlight/db";
+import supabase from "@greenlight/db/client";
 
 export interface ApiResponse<T> {
   success: boolean;

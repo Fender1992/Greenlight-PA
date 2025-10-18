@@ -4,10 +4,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@greenlight/db";
+import { supabaseAdmin } from "@greenlight/db";
 import type { Database } from "@greenlight/db";
 import crypto from "crypto";
-import { HttpError, requireUser, resolveOrgId } from "../_lib/org";
+import { HttpError, getOrgContext } from "../_lib/org";
 
 /**
  * POST /api/attachments
@@ -24,16 +24,13 @@ import { HttpError, requireUser, resolveOrgId } from "../_lib/org";
  */
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication
-    const user = await requireUser(request);
-
     // Parse multipart form data
     const formData = await request.formData();
-    const file = formData.get("file") as File | null;
-    const orgId = await resolveOrgId(
-      user,
+    const { user, orgId } = await getOrgContext(
+      request,
       formData.get("org_id") as string | null
     );
+    const file = formData.get("file") as File | null;
     const type = formData.get("type") as string | null;
 
     if (!file || !type) {
@@ -80,7 +77,7 @@ export async function POST(request: NextRequest) {
     const storagePath = `${orgId}/attachments/${date}/${sha256}-${file.name}`;
 
     // Upload to Supabase Storage
-    const { error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabaseAdmin.storage
       .from("attachments")
       .upload(storagePath, buffer, {
         contentType: file.type,
@@ -96,7 +93,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create attachment record in database
-    const { data: attachmentData, error: dbError } = await supabase
+    const { data: attachmentData, error: dbError } = await supabaseAdmin
       .from("attachment")
       .insert({
         org_id: orgId,
@@ -111,7 +108,7 @@ export async function POST(request: NextRequest) {
     if (dbError) {
       console.error("Database insert error:", dbError);
       // Clean up uploaded file
-      await supabase.storage.from("attachments").remove([storagePath]);
+      await supabaseAdmin.storage.from("attachments").remove([storagePath]);
       return NextResponse.json(
         { success: false, error: `Database error: ${dbError.message}` },
         { status: 500 }
@@ -157,11 +154,10 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const user = await requireUser(request);
-    const orgId = await resolveOrgId(user, searchParams.get("org_id"));
+    const { orgId } = await getOrgContext(request, searchParams.get("org_id"));
 
     // RLS will automatically filter to user's org
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("attachment")
       .select("*")
       .eq("org_id", orgId)

@@ -5,6 +5,7 @@
 
 // Main exports
 export { default as supabase, supabaseAdmin } from "./client";
+export { default } from "./client";
 export * from "./client";
 export * from "./types/database";
 export * from "./queries";

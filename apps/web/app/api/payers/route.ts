@@ -146,7 +146,7 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const user = await requireUser(request);
+    const { user } = await requireUser(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPatch, apiPost, ApiResponse } from "@web/lib/api";
+import { useToast } from "@web/lib/toast";
 import type {
   ChecklistItemRow,
   PaRequestWithRelations,
@@ -46,6 +47,7 @@ export default function PADetailPage() {
   const params = useParams();
   const paId = params.id as string;
   const queryClient = useQueryClient();
+  const { showToast, updateToast } = useToast();
   const [priority, setPriority] = useState<string>("standard");
 
   const paQuery = useQuery({
@@ -97,8 +99,32 @@ export default function PADetailPage() {
         "/api/llm/checklist",
         { pa_request_id: paId }
       ),
-    onSuccess: () => {
+    onMutate: () => {
+      const toastId = showToast(
+        "Generating checklist with AI...",
+        "loading",
+        0
+      );
+      return { toastId };
+    },
+    onSuccess: (_data, _variables, context) => {
       queryClient.invalidateQueries({ queryKey: ["pa-request", paId] });
+      if (context?.toastId) {
+        updateToast(
+          context.toastId,
+          "Checklist generated successfully!",
+          "success"
+        );
+      }
+    },
+    onError: (error, _variables, context) => {
+      if (context?.toastId) {
+        updateToast(
+          context.toastId,
+          `Failed to generate checklist: ${error instanceof Error ? error.message : "Unknown error"}`,
+          "error"
+        );
+      }
     },
   });
 
@@ -108,45 +134,95 @@ export default function PADetailPage() {
         "/api/llm/medical-necessity",
         { pa_request_id: paId }
       ),
-    onSuccess: () => {
+    onMutate: () => {
+      const toastId = showToast(
+        "Generating medical necessity summary with AI...",
+        "loading",
+        0
+      );
+      return { toastId };
+    },
+    onSuccess: (_data, _variables, context) => {
       queryClient.invalidateQueries({ queryKey: ["pa-request", paId] });
+      if (context?.toastId) {
+        updateToast(
+          context.toastId,
+          "Medical necessity summary generated successfully!",
+          "success"
+        );
+      }
+    },
+    onError: (error, _variables, context) => {
+      if (context?.toastId) {
+        updateToast(
+          context.toastId,
+          `Failed to generate medical necessity: ${error instanceof Error ? error.message : "Unknown error"}`,
+          "error"
+        );
+      }
     },
   });
 
   const downloadApprovalSummary = async () => {
-    const response = await fetch("/api/pdf/approval-summary", {
-      method: "POST",
-      body: JSON.stringify({ pa_request_id: paId }),
-      headers: { "Content-Type": "application/json" },
-    });
-    if (!response.ok) {
-      throw new Error("Failed to generate PDF");
+    const toastId = showToast(
+      "Generating approval summary PDF...",
+      "loading",
+      0
+    );
+    try {
+      const response = await fetch("/api/pdf/approval-summary", {
+        method: "POST",
+        body: JSON.stringify({ pa_request_id: paId }),
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || "Failed to generate PDF");
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `PA_${paId}_approval-summary.pdf`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+      updateToast(toastId, "Approval summary PDF downloaded!", "success");
+    } catch (error) {
+      updateToast(
+        toastId,
+        `PDF generation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        "error"
+      );
     }
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `PA_${paId}_approval-summary.pdf`;
-    link.click();
-    window.URL.revokeObjectURL(url);
   };
 
   const downloadCoverLetter = async () => {
-    const response = await fetch("/api/pdf/cover-letter", {
-      method: "POST",
-      body: JSON.stringify({ pa_request_id: paId }),
-      headers: { "Content-Type": "application/json" },
-    });
-    if (!response.ok) {
-      throw new Error("Failed to generate PDF");
+    const toastId = showToast("Generating cover letter PDF...", "loading", 0);
+    try {
+      const response = await fetch("/api/pdf/cover-letter", {
+        method: "POST",
+        body: JSON.stringify({ pa_request_id: paId }),
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || "Failed to generate PDF");
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `PA_${paId}_cover-letter.pdf`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+      updateToast(toastId, "Cover letter PDF downloaded!", "success");
+    } catch (error) {
+      updateToast(
+        toastId,
+        `PDF generation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        "error"
+      );
     }
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `PA_${paId}_cover-letter.pdf`;
-    link.click();
-    window.URL.revokeObjectURL(url);
   };
 
   const checklistItems: ChecklistItemRow[] = useMemo(
@@ -238,20 +314,32 @@ export default function PADetailPage() {
             <button
               onClick={() => checklistMutation.mutate()}
               disabled={checklistMutation.isPending}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+              className={`px-4 py-2 border rounded-md text-sm font-medium disabled:opacity-50 ${
+                checklistMutation.isError
+                  ? "border-red-300 text-red-700 bg-red-50 hover:bg-red-100"
+                  : "border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
+              }`}
             >
               {checklistMutation.isPending
                 ? "Generating…"
-                : "Generate Checklist"}
+                : checklistMutation.isError
+                  ? "Retry Checklist"
+                  : "Generate Checklist"}
             </button>
             <button
               onClick={() => necessityMutation.mutate()}
               disabled={necessityMutation.isPending}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+              className={`px-4 py-2 border rounded-md text-sm font-medium disabled:opacity-50 ${
+                necessityMutation.isError
+                  ? "border-red-300 text-red-700 bg-red-50 hover:bg-red-100"
+                  : "border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
+              }`}
             >
               {necessityMutation.isPending
                 ? "Generating…"
-                : "Generate Medical Necessity"}
+                : necessityMutation.isError
+                  ? "Retry Medical Necessity"
+                  : "Generate Medical Necessity"}
             </button>
             <button
               onClick={downloadApprovalSummary}

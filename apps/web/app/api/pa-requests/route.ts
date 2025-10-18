@@ -4,11 +4,12 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getPARequestsByOrg, createPARequest } from "@greenlight/db";
+import { supabaseAdmin } from "@greenlight/db";
 import type { Database } from "@greenlight/db/types/database";
-import { HttpError, requireUser, resolveOrgId } from "../_lib/org";
+import { HttpError, getOrgContext } from "../_lib/org";
 
 type PARequestInsert = Database["public"]["Tables"]["pa_request"]["Insert"];
+type OrderRow = Database["public"]["Tables"]["order"]["Row"];
 
 /**
  * GET /api/pa-requests?org_id=xxx&status=xxx&patient_id=xxx
@@ -17,24 +18,45 @@ type PARequestInsert = Database["public"]["Tables"]["pa_request"]["Insert"];
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const user = await requireUser(request);
-    const orgId = await resolveOrgId(user, searchParams.get("org_id"));
-    const status = searchParams.get("status");
-    const patientId = searchParams.get("patient_id");
+    const { orgId } = await getOrgContext(request, searchParams.get("org_id"));
+    const status = searchParams.get("status") || undefined;
+    const patientId = searchParams.get("patient_id") || undefined;
 
-    const result = await getPARequestsByOrg(orgId, {
-      status: status || undefined,
-      patientId: patientId || undefined,
-    });
+    let query = supabaseAdmin
+      .from("pa_request")
+      .select(
+        `
+        *,
+        order:order_id(
+          *,
+          patient:patient_id(*),
+          provider:provider_id(*)
+        ),
+        payer:payer_id(*)
+      `
+      )
+      .eq("org_id", orgId)
+      .order("created_at", { ascending: false });
 
-    if (!result.success) {
-      return NextResponse.json(
-        { success: false, error: result.error },
-        { status: 403 }
-      );
+    if (status) {
+      query = query.eq("status", status);
     }
 
-    return NextResponse.json({ success: true, data: result.data });
+    const { data, error } = await query;
+    if (error) {
+      throw new HttpError(500, error.message);
+    }
+
+    const filtered =
+      patientId && data
+        ? data.filter(
+            (row) =>
+              (row.order as unknown as OrderRow | null)?.patient_id ===
+              patientId
+          )
+        : data;
+
+    return NextResponse.json({ success: true, data: filtered });
   } catch (error) {
     if (error instanceof HttpError) {
       return NextResponse.json(
@@ -68,18 +90,15 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireUser(request);
-
     const body = await request.json();
-    const { org_id, order_id, payer_id, priority } = body;
+    const { user, orgId } = await getOrgContext(request, body.org_id ?? null);
 
-    const orgId = await resolveOrgId(user, org_id);
-
+    const { order_id, payer_id, priority } = body;
     if (!order_id || !payer_id) {
       throw new HttpError(400, "Missing required fields: order_id, payer_id");
     }
 
-    const paRequest: PARequestInsert = {
+    const payload: PARequestInsert = {
       org_id: orgId,
       order_id,
       payer_id,
@@ -88,19 +107,20 @@ export async function POST(request: NextRequest) {
       created_by: user.id,
     };
 
-    const result = await createPARequest(paRequest);
+    const { data, error } = await supabaseAdmin
+      .from("pa_request")
+      .insert(payload)
+      .select()
+      .single();
 
-    if (!result.success) {
-      return NextResponse.json(
-        { success: false, error: result.error },
-        { status: result.error.includes("access") ? 403 : 500 }
+    if (error) {
+      throw new HttpError(
+        error.message.includes("access") ? 403 : 500,
+        error.message
       );
     }
 
-    return NextResponse.json(
-      { success: true, data: result.data },
-      { status: 201 }
-    );
+    return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (error) {
     if (error instanceof HttpError) {
       return NextResponse.json(

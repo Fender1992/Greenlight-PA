@@ -4,12 +4,13 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser, supabase, supabaseAdmin } from "@greenlight/db";
+import { supabaseAdmin } from "@greenlight/db";
 import {
   generateMedicalNecessity,
   type MedicalNecessityInput,
 } from "@greenlight/llm";
 import type { Database } from "@greenlight/db";
+import { requireUser, resolveOrgId, HttpError } from "../../_lib/org";
 
 type Tables = Database["public"]["Tables"];
 type PaRequestRow = Tables["pa_request"]["Row"];
@@ -37,13 +38,7 @@ type PaSummaryRow = Tables["pa_summary"]["Row"];
  */
 export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const { user } = await requireUser(request);
 
     const body = await request.json();
     const { pa_request_id } = body;
@@ -68,7 +63,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: paRequest, error: paError } = await supabase
+    const { data: paRequest, error: paError } = await supabaseAdmin
       .from("pa_request")
       .select("*")
       .eq("id", pa_request_id)
@@ -82,6 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     const paRequestRow = paRequest as PaRequestRow;
+    await resolveOrgId(user, paRequestRow.org_id);
 
     if (!paRequestRow.payer_id) {
       return NextResponse.json(
@@ -91,12 +87,12 @@ export async function POST(request: NextRequest) {
     }
 
     const [orderResult, payerResult] = await Promise.all([
-      supabase
+      supabaseAdmin
         .from("order")
         .select("*")
         .eq("id", paRequestRow.order_id)
         .single(),
-      supabase
+      supabaseAdmin
         .from("payer")
         .select("*")
         .eq("id", paRequestRow.payer_id)
@@ -111,7 +107,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const patientResult = await supabase
+    const patientResult = await supabaseAdmin
       .from("patient")
       .select("*")
       .eq("id", order.patient_id)
@@ -134,7 +130,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch relevant policy snippets for criteria
-    let snippetsQuery = supabase
+    let snippetsQuery = supabaseAdmin
       .from("policy_snippet")
       .select("snippet_text")
       .eq("payer_id", payer.id);
@@ -190,7 +186,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get current version number (for versioning)
-    const { data: existingSummaries } = await supabase
+    const { data: existingSummaries } = await supabaseAdmin
       .from("pa_summary")
       .select("version")
       .eq("pa_request_id", pa_request_id)
@@ -200,14 +196,6 @@ export async function POST(request: NextRequest) {
     const nextVersion = existingSummaries?.[0]?.version
       ? existingSummaries[0].version + 1
       : 1;
-
-    // Insert summary into database
-    if (!supabaseAdmin) {
-      return NextResponse.json(
-        { success: false, error: "Admin client not configured" },
-        { status: 500 }
-      );
-    }
 
     const summaryInsert: PaSummaryInsert = {
       pa_request_id,
@@ -245,6 +233,13 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    if (error instanceof HttpError) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: error.status }
+      );
+    }
+
     console.error("Medical necessity generation error:", error);
     return NextResponse.json(
       {

@@ -3,7 +3,7 @@
  * the current user's organization context.
  */
 
-import { supabase as supabaseClient, supabaseAdmin } from "@greenlight/db";
+import { supabaseAdmin, createScopedSupabase } from "@greenlight/db";
 import type { User } from "@supabase/supabase-js";
 
 /**
@@ -43,18 +43,20 @@ function extractAccessToken(request: Request): string | null {
 /**
  * Ensures the request is authenticated and returns the Supabase user.
  */
-export async function requireUser(request: Request): Promise<User> {
+export async function requireUser(
+  request: Request
+): Promise<{ user: User; token: string }> {
   const token = extractAccessToken(request);
   if (!token) {
     throw new HttpError(401, "Unauthorized");
   }
 
-  const { data, error } = await supabaseClient.auth.getUser(token);
+  const { data, error } = await supabaseAdmin.auth.getUser(token);
   if (error || !data.user) {
     throw new HttpError(401, "Unauthorized");
   }
 
-  return data.user;
+  return { user: data.user, token };
 }
 
 /**
@@ -89,4 +91,18 @@ export async function resolveOrgId(user: User, providedOrgId: string | null) {
   }
 
   return memberships[0];
+}
+
+export function getScopedClient(token: string) {
+  return createScopedSupabase(token);
+}
+
+export async function getOrgContext(
+  request: Request,
+  providedOrgId: string | null
+) {
+  const { user, token } = await requireUser(request);
+  const orgId = await resolveOrgId(user, providedOrgId);
+  const client = getScopedClient(token);
+  return { user, token, orgId, client };
 }
