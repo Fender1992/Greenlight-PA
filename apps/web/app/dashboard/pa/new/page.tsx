@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiGet, apiPost, ApiResponse } from "@web/lib/api";
@@ -12,7 +12,7 @@ import type {
 
 type PaCreateResponse = ApiResponse<PaRequestRow>;
 
-export default function PaCreatePage() {
+function PaCreateForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedOrderId = searchParams?.get("order_id") ?? "";
@@ -269,5 +269,21 @@ export default function PaCreatePage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function PaCreatePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="px-4 sm:px-0">
+          <div className="max-w-4xl mx-auto bg-white rounded-lg shadow p-6">
+            <div className="text-sm text-gray-500">Loading...</div>
+          </div>
+        </div>
+      }
+    >
+      <PaCreateForm />
+    </Suspense>
   );
 }
