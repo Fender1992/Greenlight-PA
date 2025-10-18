@@ -9,10 +9,10 @@ import { HttpError, requireUser, resolveOrgId } from "../_lib/org";
 
 type OrgUpdate = Database["public"]["Tables"]["org"]["Update"];
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    await requireUser();
-    const orgId = await resolveOrgId(null);
+    const user = await requireUser(request);
+    const orgId = await resolveOrgId(user, null);
 
     const { data, error } = await supabase
       .from("org")
@@ -49,8 +49,8 @@ export async function GET(_request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    await requireUser();
-    const orgId = await resolveOrgId(null);
+    const user = await requireUser(request);
+    const orgId = await resolveOrgId(user, null);
     const body = await request.json();
 
     const updates: OrgUpdate = {

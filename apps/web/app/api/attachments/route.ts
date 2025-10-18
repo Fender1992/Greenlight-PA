@@ -25,12 +25,15 @@ import { HttpError, requireUser, resolveOrgId } from "../_lib/org";
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
-    const user = await requireUser();
+    const user = await requireUser(request);
 
     // Parse multipart form data
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
-    const orgId = await resolveOrgId(formData.get("org_id") as string | null);
+    const orgId = await resolveOrgId(
+      user,
+      formData.get("org_id") as string | null
+    );
     const type = formData.get("type") as string | null;
 
     if (!file || !type) {
@@ -129,6 +132,13 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    if (error instanceof HttpError) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: error.status }
+      );
+    }
+
     console.error("Attachment upload error:", error);
     return NextResponse.json(
       {
@@ -147,7 +157,8 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const orgId = await resolveOrgId(searchParams.get("org_id"));
+    const user = await requireUser(request);
+    const orgId = await resolveOrgId(user, searchParams.get("org_id"));
 
     // RLS will automatically filter to user's org
     const { data, error } = await supabase

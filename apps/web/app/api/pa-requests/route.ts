@@ -17,7 +17,8 @@ type PARequestInsert = Database["public"]["Tables"]["pa_request"]["Insert"];
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const orgId = await resolveOrgId(searchParams.get("org_id"));
+    const user = await requireUser(request);
+    const orgId = await resolveOrgId(user, searchParams.get("org_id"));
     const status = searchParams.get("status");
     const patientId = searchParams.get("patient_id");
 
@@ -67,12 +68,12 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireUser();
+    const user = await requireUser(request);
 
     const body = await request.json();
     const { org_id, order_id, payer_id, priority } = body;
 
-    const orgId = await resolveOrgId(org_id);
+    const orgId = await resolveOrgId(user, org_id);
 
     if (!order_id || !payer_id) {
       throw new HttpError(400, "Missing required fields: order_id, payer_id");

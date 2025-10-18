@@ -3,11 +3,8 @@
  * the current user's organization context.
  */
 
-import {
-  getCurrentUser,
-  getCurrentUserOrgId,
-  getUserOrgIds,
-} from "@greenlight/db";
+import { supabase as supabaseClient, supabaseAdmin } from "@greenlight/db";
+import type { User } from "@supabase/supabase-js";
 
 /**
  * Custom error wrapper that allows API routes to throw and
@@ -22,29 +19,62 @@ export class HttpError extends Error {
   }
 }
 
+function extractAccessToken(request: Request): string | null {
+  const authHeader = request.headers.get("authorization");
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    return authHeader.slice(7);
+  }
+
+  const cookieHeader = request.headers.get("cookie");
+  if (cookieHeader) {
+    for (const part of cookieHeader.split(";")) {
+      const [rawName, ...rest] = part.trim().split("=");
+      if (!rawName) continue;
+      const name = rawName.trim();
+      if (name === "sb-access-token") {
+        return decodeURIComponent(rest.join("="));
+      }
+    }
+  }
+
+  return null;
+}
+
 /**
  * Ensures the request is authenticated and returns the Supabase user.
  */
-export async function requireUser() {
-  const user = await getCurrentUser();
-  if (!user) {
+export async function requireUser(request: Request): Promise<User> {
+  const token = extractAccessToken(request);
+  if (!token) {
     throw new HttpError(401, "Unauthorized");
   }
-  return user;
+
+  const { data, error } = await supabaseClient.auth.getUser(token);
+  if (error || !data.user) {
+    throw new HttpError(401, "Unauthorized");
+  }
+
+  return data.user;
 }
 
 /**
  * Resolves an organization id either from an explicit query parameter
  * or from the authenticated user's memberships.
  */
-export async function resolveOrgId(providedOrgId: string | null) {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new HttpError(401, "Unauthorized");
+export async function resolveOrgId(user: User, providedOrgId: string | null) {
+  const { data, error } = await supabaseAdmin
+    .from("member")
+    .select("org_id")
+    .eq("user_id", user.id);
+
+  if (error) {
+    console.error("Failed to fetch organization memberships", error);
+    throw new HttpError(500, "Unable to resolve organization");
   }
 
+  const memberships = data?.map((row) => row.org_id) ?? [];
+
   if (providedOrgId) {
-    const memberships = await getUserOrgIds(user.id);
     if (!memberships.includes(providedOrgId)) {
       throw new HttpError(
         403,
@@ -54,10 +84,9 @@ export async function resolveOrgId(providedOrgId: string | null) {
     return providedOrgId;
   }
 
-  const orgId = await getCurrentUserOrgId();
-  if (!orgId) {
+  if (memberships.length === 0) {
     throw new HttpError(404, "No organization found for current user");
   }
 
-  return orgId;
+  return memberships[0];
 }

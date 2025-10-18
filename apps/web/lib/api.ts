@@ -1,3 +1,5 @@
+import { supabase } from "@greenlight/db";
+
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -9,13 +11,25 @@ export async function apiRequest<T>(
   input: string,
   init?: RequestInit
 ): Promise<T> {
+  const headers = new Headers(init?.headers || {});
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data?.session?.access_token;
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+  } catch (error) {
+    console.warn("Unable to read Supabase session", error);
+  }
+
   const response = await fetch(input, {
     credentials: "include",
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers || {}),
-    },
+    headers,
   });
 
   const contentType = response.headers.get("content-type") || "";

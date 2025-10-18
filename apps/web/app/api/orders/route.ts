@@ -17,7 +17,8 @@ type OrderInsert = Database["public"]["Tables"]["order"]["Insert"];
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const orgId = await resolveOrgId(searchParams.get("org_id"));
+    const user = await requireUser(request);
+    const orgId = await resolveOrgId(user, searchParams.get("org_id"));
 
     const result = await getOrdersByOrg(orgId);
 
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    await requireUser();
+    const user = await requireUser(request);
 
     const body = await request.json();
     const {
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
       clinic_notes_text,
     } = body;
 
-    const orgId = await resolveOrgId(org_id);
+    const orgId = await resolveOrgId(user, org_id);
 
     if (
       !patient_id ||

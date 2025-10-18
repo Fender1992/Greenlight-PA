@@ -11,9 +11,9 @@ type PatientInsert = Database["public"]["Tables"]["patient"]["Insert"];
 
 export async function GET(request: NextRequest) {
   try {
-    await requireUser();
     const { searchParams } = new URL(request.url);
-    const orgId = await resolveOrgId(searchParams.get("org_id"));
+    const user = await requireUser(request);
+    const orgId = await resolveOrgId(user, searchParams.get("org_id"));
 
     const result = await getPatientsByOrg(orgId);
 
@@ -44,10 +44,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireUser();
+    const user = await requireUser(request);
     const body = await request.json();
 
-    const orgId = await resolveOrgId(body.org_id ?? null);
+    const orgId = await resolveOrgId(user, body.org_id ?? null);
 
     const patient: PatientInsert = {
       org_id: orgId,
