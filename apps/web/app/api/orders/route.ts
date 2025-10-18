@@ -21,6 +21,14 @@ export async function GET(request: NextRequest) {
       request,
       searchParams.get("org_id")
     );
+    const limit = Math.min(
+      Math.max(Number.parseInt(searchParams.get("limit") ?? "", 10) || 50, 1),
+      100
+    );
+    const offset = Math.max(
+      Number.parseInt(searchParams.get("offset") ?? "", 10) || 0,
+      0
+    );
 
     const { data, error } = await client
       .from("order")
@@ -32,13 +40,18 @@ export async function GET(request: NextRequest) {
       `
       )
       .eq("org_id", orgId)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (error) {
       throw new HttpError(500, error.message);
     }
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({
+      success: true,
+      data,
+      pagination: { limit, offset },
+    });
   } catch (error) {
     if (error instanceof HttpError) {
       return NextResponse.json(

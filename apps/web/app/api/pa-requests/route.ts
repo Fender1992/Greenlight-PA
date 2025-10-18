@@ -9,6 +9,7 @@ import { HttpError, getOrgContext } from "../_lib/org";
 import { validatePaRequestCreate } from "@web/lib/validation";
 
 type PARequestInsert = Database["public"]["Tables"]["pa_request"]["Insert"];
+type StatusEventInsert = Database["public"]["Tables"]["status_event"]["Insert"];
 type OrderRow = Database["public"]["Tables"]["order"]["Row"];
 
 /**
@@ -24,6 +25,14 @@ export async function GET(request: NextRequest) {
     );
     const status = searchParams.get("status") || undefined;
     const patientId = searchParams.get("patient_id") || undefined;
+    const limit = Math.min(
+      Math.max(Number.parseInt(searchParams.get("limit") ?? "", 10) || 50, 1),
+      100
+    );
+    const offset = Math.max(
+      Number.parseInt(searchParams.get("offset") ?? "", 10) || 0,
+      0
+    );
 
     let query = client
       .from("pa_request")
@@ -39,7 +48,8 @@ export async function GET(request: NextRequest) {
       `
       )
       .eq("org_id", orgId)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (status) {
       query = query.eq("status", status);
@@ -59,7 +69,11 @@ export async function GET(request: NextRequest) {
           )
         : data;
 
-    return NextResponse.json({ success: true, data: filtered });
+    return NextResponse.json({
+      success: true,
+      data: filtered,
+      pagination: { limit, offset },
+    });
   } catch (error) {
     if (error instanceof HttpError) {
       return NextResponse.json(
@@ -126,6 +140,23 @@ export async function POST(request: NextRequest) {
       throw new HttpError(
         error.message.includes("access") ? 403 : 500,
         error.message
+      );
+    }
+
+    const auditEvent: StatusEventInsert = {
+      pa_request_id: data.id,
+      status: "draft",
+      note: "PA request created",
+      actor: user.id,
+    };
+
+    const { error: statusEventError } = await client
+      .from("status_event")
+      .insert(auditEvent);
+    if (statusEventError) {
+      console.error(
+        "Failed to record PA creation audit event",
+        statusEventError
       );
     }
 

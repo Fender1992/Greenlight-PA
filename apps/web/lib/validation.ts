@@ -19,11 +19,13 @@ const nonEmptyTrimmedString = z
   .pipe(z.string().min(1, "Field cannot be empty"));
 
 const optionalNullableString = z
-  .string()
-  .transform((value) => value.trim())
-  .pipe(z.string().min(1))
-  .optional()
-  .nullable();
+  .union([z.string(), z.null(), z.undefined()])
+  .transform((value) => {
+    if (value === undefined) return undefined;
+    if (value === null) return null;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  });
 
 const codeArraySchema = z
   .array(z.string())
