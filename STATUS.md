@@ -111,9 +111,12 @@
 | Component          | Status      | Last Modified | Notes                                 |
 | ------------------ | ----------- | ------------- | ------------------------------------- |
 | Root Layout        | 🟢 Complete | 2025-10-17    | Basic layout with demo mode banner    |
-| Providers          | 🟢 Complete | 2025-10-17    | React Query provider configured       |
+| Providers          | 🟢 Complete | 2025-10-17    | React Query + Toast providers         |
 | Home Page          | 🟢 Complete | 2025-10-17    | Landing page with navigation          |
 | CI Pipeline        | 🟢 Complete | 2025-10-17    | Lint, typecheck, test, build, e2e     |
+| Toast System       | 🟢 Complete | 2025-10-17    | Context-based notifications           |
+| User Reset Script  | 🟢 Complete | 2025-10-17    | Interactive/non-interactive modes     |
+| Email Validation   | 🟢 Complete | 2025-10-17    | API endpoint + signup integration     |
 | **Database**       |             |               |                                       |
 | Schema             | 🟢 Complete | 2025-10-17    | 14 tables with full relationships     |
 | RLS Policies       | 🟢 Complete | 2025-10-17    | Multi-tenant isolation enforced       |
@@ -138,11 +141,13 @@
 | **Web UI**         |             |               |                                       |
 | Dashboard Layout   | 🟢 Complete | 2025-10-17    | Navigation with all screen links      |
 | PA Worklist        | 🟢 Complete | 2025-10-17    | Filters, search, summary stats        |
-| PA Detail/Editor   | 🟢 Complete | 2025-10-17    | 5 tabs with mock data integration     |
+| PA Detail/Editor   | 🟢 Complete | 2025-10-17    | Attachments, policy snippets, toasts  |
 | Patient Management | 🟢 Complete | 2025-10-17    | Search and patient list               |
 | Order Management   | 🟢 Complete | 2025-10-17    | Status tracking and PA links          |
 | Admin Interface    | 🟢 Complete | 2025-10-17    | Payer mgmt, settings, users, audit    |
 | Metrics Dashboard  | 🟢 Complete | 2025-10-17    | KPIs, trends, payer/modality analysis |
+| Signup Page        | 🟢 Complete | 2025-10-17    | Email validation, password strength   |
+| Login Page         | 🟢 Complete | 2025-10-17    | PKCE auth flow                        |
 | **Policy System**  |             |               |                                       |
 | @greenlight/policy | 🟢 Complete | 2025-10-17    | Scraper, normalizer, ingestion        |
 | Policy API         | 🟢 Complete | 2025-10-17    | Ingestion endpoint                    |
@@ -225,6 +230,43 @@
 ---
 
 ## Recent Changes
+
+### 2025-10-17 - User Management & Toast Notifications
+
+- ✅ Created comprehensive user reset script (scripts/reset-users.ts)
+  - Interactive confirmation mode with "DELETE ALL USERS" prompt
+  - Non-interactive mode with CONFIRM=yes flag
+  - Deletes all members, organizations, and auth users
+  - Detailed progress logging with emoji indicators
+  - Summary report of successful/failed deletions
+  - Comprehensive documentation in scripts/README.md
+- ✅ Implemented email validation system
+  - New API endpoint: POST /api/auth/check-email
+  - Email format validation with regex
+  - Duplicate email detection before signup
+  - Case-insensitive email comparison
+  - Integrated into signup page with clear error messages
+- ✅ Added toast notification system
+  - ToastProvider context with auto-dismiss functionality
+  - Support for loading, success, error, and info toasts
+  - Loading toasts that update to success/error states
+  - Integrated into PA detail page for LLM operations
+  - Toast notifications for PDF downloads
+- ✅ Implemented retry functionality for failed operations
+  - Visual feedback with red borders on error states
+  - Button text changes to "Retry..." on failure
+  - Error state styling distinguishes from normal state
+- ✅ Enhanced PA detail view
+  - Display attachments list with type badges and OCR preview
+  - Show policy snippets with modality and CPT code filters
+  - Color-coded attachment types (order, imaging, etc.)
+  - Policy snippet source links
+- ✅ Added tsx dependency for TypeScript script execution
+- ✅ Fixed multiple TypeScript errors in API routes
+  - Fixed import paths in LLM routes (checklist, medical-necessity)
+  - Fixed requireUser destructuring in payers route
+  - Fixed type assertions with unknown intermediate cast
+  - All routes now use consistent getOrgContext/requireUser patterns
 
 ### 2025-10-17 - Environment & Build Hardening
 
