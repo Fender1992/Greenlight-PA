@@ -630,12 +630,13 @@ export default function PADetailPage() {
                             {formatDate(attachment.created_at)}
                           </span>
                         </div>
-                        {attachment.ocr_text && (
-                          <div className="text-xs text-gray-400 mt-1 line-clamp-2">
-                            {attachment.ocr_text.slice(0, 100)}
-                            {attachment.ocr_text.length > 100 ? "..." : ""}
-                          </div>
-                        )}
+                        {attachment.ocr_text &&
+                          typeof attachment.ocr_text === "string" && (
+                            <div className="text-xs text-gray-400 mt-1 line-clamp-2">
+                              {attachment.ocr_text.slice(0, 100)}
+                              {attachment.ocr_text.length > 100 ? "..." : ""}
+                            </div>
+                          )}
                       </div>
                     </div>
                   </div>
