@@ -6,7 +6,7 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@greenlight/db";
+import supabase from "@greenlight/db/client";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -21,6 +21,34 @@ export default function SignupPage() {
     setLoading(true);
     setError(null);
     setMessage(null);
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address");
+      setLoading(false);
+      return;
+    }
+
+    // Check if email already exists
+    try {
+      const checkResponse = await fetch("/api/auth/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const checkData = await checkResponse.json();
+
+      if (checkData.success && !checkData.available) {
+        setError("This email is already registered. Please sign in instead.");
+        setLoading(false);
+        return;
+      }
+    } catch (checkError) {
+      console.error("Error checking email:", checkError);
+      // Continue with signup if check fails - Supabase will catch duplicates
+    }
 
     // Validate passwords match
     if (password !== confirmPassword) {

@@ -7,7 +7,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@greenlight/db";
+import supabase from "@greenlight/db/client";
 
 export default function LoginPage() {
   const router = useRouter();

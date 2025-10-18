@@ -3,7 +3,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@greenlight/db";
+import { supabaseAdmin } from "@greenlight/db";
 import type { Database } from "@greenlight/db/types/database";
 import { HttpError, requireUser } from "../_lib/org";
 
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("q")?.toLowerCase() ?? "";
 
-    let query = supabase.from("payer").select("*").order("name");
+    let query = supabaseAdmin.from("payer").select("*").order("name");
     if (search) {
       query = query.ilike("name", `%${search}%`);
     }
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       policy_links: Array.isArray(body.policy_links) ? body.policy_links : [],
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("payer")
       .insert(payer)
       .select()
@@ -112,7 +112,7 @@ export async function PATCH(request: NextRequest) {
         : undefined,
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("payer")
       .update(updates)
       .eq("id", id)
@@ -154,7 +154,7 @@ export async function DELETE(request: NextRequest) {
       throw new HttpError(400, "Payer id is required");
     }
 
-    const { error } = await supabase.from("payer").delete().eq("id", id);
+    const { error } = await supabaseAdmin.from("payer").delete().eq("id", id);
     if (error) {
       throw new HttpError(500, error.message);
     }

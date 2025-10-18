@@ -15,12 +15,14 @@
     "test:e2e": "npm run test:e2e --workspace=@greenlight/web",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "reset-users": "tsx scripts/reset-users.ts",
     "prepare": "command -v husky >/dev/null 2>&1 && husky install || true"
   },
   "devDependencies": {
     "@types/node": "^20.17.10",
     "husky": "^9.1.7",
     "prettier": "^3.4.2",
+    "tsx": "^4.7.0",
     "typescript": "^5.7.2"
   }
 }

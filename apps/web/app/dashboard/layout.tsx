@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { supabase } from "@greenlight/db";
+import supabase from "@greenlight/db/client";
 import type { User } from "@supabase/supabase-js";
 
 export default function DashboardLayout({
