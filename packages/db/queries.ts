@@ -224,7 +224,10 @@ export async function getPARequestById(paId: string) {
         provider:provider_id(*)
       ),
       payer:payer_id(*),
-      checklist_items:pa_checklist_item(*),
+      checklist_items:pa_checklist_item(
+        *,
+        evidence_attachment:evidence_attachment_id(*)
+      ),
       summaries:pa_summary(*),
       status_events:status_event(*)
     `
@@ -236,7 +239,53 @@ export async function getPARequestById(paId: string) {
     return { success: false, data: null, error: error.message } as const;
   }
 
-  return { success: true, data, error: null } as const;
+  // Also fetch all attachments for this PA request's organization
+  // (in case there are attachments not yet linked to checklist items)
+  const { data: attachments } = await supabase
+    .from("attachment")
+    .select("*")
+    .eq("org_id", data.org_id)
+    .order("created_at", { ascending: false });
+
+  // Fetch relevant policy snippets based on payer, modality, and CPT codes
+  const policySnippetsPromises = [];
+
+  // Get snippets for the payer + modality
+  if (data.payer_id && (data.order as any)?.modality) {
+    policySnippetsPromises.push(
+      supabase
+        .from("policy_snippet")
+        .select("*")
+        .eq("payer_id", data.payer_id)
+        .ilike("modality", `%${(data.order as any).modality}%`)
+    );
+  }
+
+  // Get snippets for CPT codes
+  const cptCodes = ((data.order as any)?.cpt_codes ?? []) as string[];
+  for (const cptCode of cptCodes) {
+    policySnippetsPromises.push(
+      supabase.from("policy_snippet").select("*").eq("cpt_code", cptCode)
+    );
+  }
+
+  const snippetResults = await Promise.all(policySnippetsPromises);
+  const allSnippets = snippetResults
+    .filter((result) => result.data)
+    .flatMap((result) => result.data ?? []);
+
+  // Deduplicate snippets by ID
+  const uniqueSnippets = Array.from(
+    new Map(allSnippets.map((s) => [s.id, s])).values()
+  );
+
+  const result = {
+    ...data,
+    attachments: attachments ?? [],
+    policy_snippets: uniqueSnippets,
+  };
+
+  return { success: true, data: result, error: null } as const;
 }
 
 export async function createPARequest(

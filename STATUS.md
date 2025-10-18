@@ -1,6 +1,6 @@
 # Greenlight PA - Build Status
 
-**Last Updated:** 2025-10-17 (Env alignment & build validation)
+**Last Updated:** 2025-10-17 (Auth-ready dashboard + real data)
 
 ---
 
@@ -233,6 +233,13 @@
 - ✅ Local Next.js build succeeds after self-hosting fonts (no external fetch required)
 - ✅ Updated workspace test scripts for consistency (`--pool=forks`, `--passWithNoTests`)
 - ⚠️ Vitest currently crashes under Node 22 (tinypool worker exit); see Testing notes for mitigation
+
+### 2025-10-17 - Dashboard & API Productionization
+
+- ✅ Replaced all dashboard mock data with live Supabase-backed queries (PA worklist, orders, patients, metrics, admin console, PA detail)
+- ✅ Implemented scoped API routes for PA requests, orders, metrics, audit log, attachments, patients, payers, and org settings with JWT verification
+- ✅ Added shared API client util to forward Supabase access token from browser to server routes
+- ✅ Updated Supabase PKCE flow for email links and enforced org membership checks per request
 
 ### 2025-10-17 - Section 8 Complete (Metrics & Nudges)
 

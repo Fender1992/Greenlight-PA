@@ -164,6 +164,9 @@ export default function PADetailPage() {
     [data]
   );
 
+  const attachments = useMemo(() => data?.attachments ?? [], [data]);
+  const policySnippets = useMemo(() => data?.policy_snippets ?? [], [data]);
+
   if (paQuery.isLoading) {
     return (
       <div className="px-4 sm:px-0">
@@ -397,6 +400,68 @@ export default function PADetailPage() {
               ))
             )}
           </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">
+              Payer Policy Guidelines
+            </h2>
+            {policySnippets.length === 0 ? (
+              <div className="text-sm text-gray-500">
+                No specific policy guidelines found for this payer and
+                procedure.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {policySnippets.map((snippet) => (
+                  <div
+                    key={snippet.id}
+                    className="border border-blue-200 rounded-lg p-4 bg-blue-50"
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="flex-1">
+                        {snippet.modality && (
+                          <span className="inline-block px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded mr-2">
+                            {snippet.modality}
+                          </span>
+                        )}
+                        {snippet.cpt_code && (
+                          <span className="inline-block px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded">
+                            CPT: {snippet.cpt_code}
+                          </span>
+                        )}
+                      </div>
+                      {snippet.source_url && (
+                        <a
+                          href={snippet.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                        >
+                          Source
+                          <svg
+                            className="w-3 h-3"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                            />
+                          </svg>
+                        </a>
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-700 whitespace-pre-line">
+                      {snippet.snippet_text}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
         </div>
 
         <aside className="bg-white rounded-lg shadow p-6 space-y-4">
@@ -430,10 +495,55 @@ export default function PADetailPage() {
             <h3 className="text-sm font-semibold text-gray-900 mb-2">
               Attachments
             </h3>
-            <div className="text-sm text-gray-600">
-              Upload and manage supporting documentation from the Attachments
-              tab.
-            </div>
+            {attachments.length === 0 ? (
+              <div className="text-sm text-gray-600">
+                No attachments yet. Upload supporting documentation to
+                strengthen your PA request.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {attachments.map((attachment) => (
+                  <div
+                    key={attachment.id}
+                    className="text-sm border border-gray-200 rounded px-3 py-2"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900 truncate">
+                          {attachment.storage_path.split("/").pop()}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                              attachment.type === "order"
+                                ? "bg-blue-100 text-blue-800"
+                                : attachment.type === "imaging"
+                                  ? "bg-purple-100 text-purple-800"
+                                  : attachment.type === "lab"
+                                    ? "bg-green-100 text-green-800"
+                                    : attachment.type === "notes"
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {attachment.type}
+                          </span>
+                          <span className="ml-2">
+                            {formatDate(attachment.created_at)}
+                          </span>
+                        </div>
+                        {attachment.ocr_text && (
+                          <div className="text-xs text-gray-400 mt-1 line-clamp-2">
+                            {attachment.ocr_text.slice(0, 100)}
+                            {attachment.ocr_text.length > 100 ? "..." : ""}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         </aside>
       </div>

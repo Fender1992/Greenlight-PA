@@ -13,18 +13,26 @@ export type ChecklistItemRow =
 export type PaSummaryRow = Db["public"]["Tables"]["pa_summary"]["Row"];
 export type StatusEventRow = Db["public"]["Tables"]["status_event"]["Row"];
 export type AuditLogRow = Db["public"]["Tables"]["audit_log"]["Row"];
+export type AttachmentRow = Db["public"]["Tables"]["attachment"]["Row"];
+export type PolicySnippetRow = Db["public"]["Tables"]["policy_snippet"]["Row"];
 
 export type OrderWithRelations = OrderRow & {
   patient: PatientRow | null;
   provider: ProviderRow | null;
 };
 
+export type ChecklistItemWithAttachment = ChecklistItemRow & {
+  evidence_attachment?: AttachmentRow | null;
+};
+
 export type PaRequestWithRelations = PaRequestRow & {
   order: OrderWithRelations | null;
   payer: PayerRow | null;
-  checklist_items?: ChecklistItemRow[] | null;
+  checklist_items?: ChecklistItemWithAttachment[] | null;
   summaries?: PaSummaryRow[] | null;
   status_events?: StatusEventRow[] | null;
+  attachments?: AttachmentRow[] | null;
+  policy_snippets?: PolicySnippetRow[] | null;
 };
 
 export interface MetricsResponse {
