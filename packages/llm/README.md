@@ -21,24 +21,27 @@ LLM prompt builders for Greenlight PA using Anthropic Claude.
 
 ```bash
 # .env.local
-ANTHROPIC_API_KEY=sk-ant-...  # Or cgpt_sk_... for CacheGPT
-ANTHROPIC_BASE_URL=           # Set to https://api.cachegpt.com/v1 for CacheGPT routing
 ENABLE_LLM=true
+
+# Option 1: Use CacheGPT (recommended for caching/cost optimization)
+CACHEGPT_API_KEY=cgpt_sk_...
+
+# Option 2: Use direct Anthropic API
+# ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-**Using CacheGPT:**
+**Using CacheGPT (Recommended):**
 
 CacheGPT provides caching and cost optimization for Anthropic API calls. To use it:
 
-1. Set `ANTHROPIC_API_KEY` to your CacheGPT key (starts with `cgpt_sk_...`)
-2. Set `ANTHROPIC_BASE_URL=https://api.cachegpt.com/v1`
-3. The SDK will automatically route requests through CacheGPT
+1. Set `CACHEGPT_API_KEY` to your CacheGPT key (starts with `cgpt_sk_...`)
+2. The SDK will automatically route requests through `https://api.cachegpt.com/v1`
+3. Your CacheGPT proxy handles caching and forwards to Anthropic API
 
 **Using Direct Anthropic API:**
 
 1. Set `ANTHROPIC_API_KEY` to your Anthropic key (starts with `sk-ant-...`)
-2. Leave `ANTHROPIC_BASE_URL` empty or unset
-3. The SDK will use the default Anthropic API endpoint
+2. The SDK will use the default Anthropic API endpoint directly
 
 ## Usage
 

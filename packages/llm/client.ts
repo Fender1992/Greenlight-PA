@@ -7,12 +7,14 @@ import Anthropic from "@anthropic-ai/sdk";
 
 /**
  * Anthropic Claude Client
- * Uses ANTHROPIC_API_KEY from Supabase environment variables
- * Can be configured to use CacheGPT or direct Anthropic API
+ * Uses CACHEGPT_API_KEY for CacheGPT proxy routing
+ * Falls back to ANTHROPIC_API_KEY for direct Anthropic API
  */
 export const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || "",
-  baseURL: process.env.ANTHROPIC_BASE_URL || undefined,
+  apiKey: process.env.CACHEGPT_API_KEY || process.env.ANTHROPIC_API_KEY || "",
+  baseURL: process.env.CACHEGPT_API_KEY
+    ? "https://api.cachegpt.com/v1"
+    : undefined,
 });
 
 /**
@@ -46,11 +48,11 @@ export async function callClaude(params: {
   temperature?: number;
 }): Promise<LLMResponse<string>> {
   try {
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!process.env.CACHEGPT_API_KEY && !process.env.ANTHROPIC_API_KEY) {
       return {
         success: false,
         data: null,
-        error: "ANTHROPIC_API_KEY not configured",
+        error: "CACHEGPT_API_KEY or ANTHROPIC_API_KEY not configured",
       };
     }
 
@@ -101,8 +103,8 @@ export async function* callClaudeStream(params: {
   max_tokens?: number;
   temperature?: number;
 }): AsyncGenerator<string, void, unknown> {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error("ANTHROPIC_API_KEY not configured");
+  if (!process.env.CACHEGPT_API_KEY && !process.env.ANTHROPIC_API_KEY) {
+    throw new Error("CACHEGPT_API_KEY or ANTHROPIC_API_KEY not configured");
   }
 
   const stream = await anthropic.messages.stream({
