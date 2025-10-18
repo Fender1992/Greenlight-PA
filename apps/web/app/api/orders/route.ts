@@ -17,7 +17,6 @@ type OrderInsert = Database["public"]["Tables"]["order"]["Insert"];
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    await requireUser();
     const orgId = await resolveOrgId(searchParams.get("org_id"));
 
     const result = await getOrdersByOrg(orgId);

@@ -5,7 +5,7 @@
 
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@greenlight/db";
-import { HttpError, requireUser, resolveOrgId } from "../_lib/org";
+import { HttpError, resolveOrgId } from "../_lib/org";
 
 /**
  * GET /api/audit
@@ -24,8 +24,6 @@ import { HttpError, requireUser, resolveOrgId } from "../_lib/org";
  */
 export async function GET(request: Request) {
   try {
-    await requireUser();
-
     const { searchParams } = new URL(request.url);
 
     const orgId = await resolveOrgId(searchParams.get("org_id"));

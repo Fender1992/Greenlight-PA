@@ -16,8 +16,6 @@ type PARequestInsert = Database["public"]["Tables"]["pa_request"]["Insert"];
  */
 export async function GET(request: NextRequest) {
   try {
-    await requireUser();
-
     const { searchParams } = new URL(request.url);
     const orgId = await resolveOrgId(searchParams.get("org_id"));
     const status = searchParams.get("status");

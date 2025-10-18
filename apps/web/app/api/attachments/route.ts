@@ -146,8 +146,6 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    await requireUser();
-
     const { searchParams } = new URL(request.url);
     const orgId = await resolveOrgId(searchParams.get("org_id"));
 

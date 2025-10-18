@@ -38,7 +38,10 @@ export async function requireUser() {
  * or from the authenticated user's memberships.
  */
 export async function resolveOrgId(providedOrgId: string | null) {
-  const user = await requireUser();
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new HttpError(401, "Unauthorized");
+  }
 
   if (providedOrgId) {
     const memberships = await getUserOrgIds(user.id);

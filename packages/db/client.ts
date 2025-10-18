@@ -81,6 +81,7 @@ export const supabase = new Proxy(
             persistSession: true,
             autoRefreshToken: true,
             detectSessionInUrl: true,
+            flowType: "pkce",
           },
         });
       }
