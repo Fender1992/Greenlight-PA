@@ -46,7 +46,7 @@ export default function DashboardLayout({
     }
   };
 
-  const displayName = user?.email || "Demo User";
+  const displayName = user?.email || "Guest";
 
   return (
     <div className="min-h-screen bg-gray-50">

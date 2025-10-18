@@ -91,34 +91,6 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Demo Mode Banner */}
-        {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
-          <div className="rounded-md bg-blue-50 p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg
-                  className="h-5 w-5 text-blue-400"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-blue-700">
-                  <strong>Demo Mode:</strong> Authentication is optional. You
-                  can access the dashboard directly or sign in with Supabase
-                  Auth.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Error Message */}
         {error && (
           <div className="rounded-md bg-red-50 p-4">
@@ -232,16 +204,6 @@ export default function LoginPage() {
             >
               {loading ? "Sending..." : "Send magic link"}
             </button>
-
-            {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
-              <button
-                type="button"
-                onClick={() => router.push("/dashboard")}
-                className="group relative w-full flex justify-center py-2 px-4 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-              >
-                Continue as Demo User →
-              </button>
-            )}
           </div>
         </form>
 
