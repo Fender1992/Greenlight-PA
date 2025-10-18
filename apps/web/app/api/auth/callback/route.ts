@@ -17,7 +17,24 @@ export async function GET(request: Request) {
 
   if (code) {
     try {
-      await supabase.auth.exchangeCodeForSession(code);
+      const { data } = await supabase.auth.exchangeCodeForSession(code);
+
+      // Check if user needs provisioning (org/member records)
+      if (data.user) {
+        try {
+          await fetch(`${new URL(request.url).origin}/api/auth/provision`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: data.user.id,
+              email: data.user.email,
+            }),
+          });
+        } catch (provisionError) {
+          console.error("[Auth] Provisioning error:", provisionError);
+          // Don't block login if provisioning fails
+        }
+      }
     } catch (error) {
       console.error("[Auth] Error exchanging code for session:", error);
       return NextResponse.redirect(

@@ -48,6 +48,29 @@ export default function SignupPage() {
       if (error) throw error;
 
       if (data.user) {
+        // Create organization and member record for new user
+        try {
+          const response = await fetch("/api/auth/provision", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: data.user.id,
+              email: data.user.email,
+            }),
+          });
+
+          if (!response.ok) {
+            console.error(
+              "Failed to provision org/member:",
+              await response.text()
+            );
+            // Don't fail signup if provisioning fails - it can be done later
+          }
+        } catch (provisionError) {
+          console.error("Error provisioning org/member:", provisionError);
+          // Don't fail signup if provisioning fails
+        }
+
         setMessage(
           "Account created! Check your email to confirm your account."
         );
