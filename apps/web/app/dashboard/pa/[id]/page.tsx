@@ -402,11 +402,21 @@ export default function PADetailPage() {
               </div>
               <div>
                 <div className="text-xs text-gray-500">CPT Codes</div>
-                <div>{data.order?.cpt_codes.join(", ") || "—"}</div>
+                <div>
+                  {Array.isArray(data.order?.cpt_codes) &&
+                  data.order.cpt_codes.length > 0
+                    ? data.order.cpt_codes.join(", ")
+                    : "—"}
+                </div>
               </div>
               <div>
                 <div className="text-xs text-gray-500">ICD-10 Codes</div>
-                <div>{data.order?.icd10_codes.join(", ") || "—"}</div>
+                <div>
+                  {Array.isArray(data.order?.icd10_codes) &&
+                  data.order.icd10_codes.length > 0
+                    ? data.order.icd10_codes.join(", ")
+                    : "—"}
+                </div>
               </div>
             </div>
           </section>

@@ -4,7 +4,6 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@greenlight/db";
 import type { Database } from "@greenlight/db/types/database";
 import { HttpError, getOrgContext } from "../_lib/org";
 
@@ -17,9 +16,12 @@ type OrderInsert = Database["public"]["Tables"]["order"]["Insert"];
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const { orgId } = await getOrgContext(request, searchParams.get("org_id"));
+    const { orgId, client } = await getOrgContext(
+      request,
+      searchParams.get("org_id")
+    );
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await client
       .from("order")
       .select(
         `
@@ -73,7 +75,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { orgId } = await getOrgContext(request, body.org_id ?? null);
+    const { orgId, client } = await getOrgContext(request, body.org_id ?? null);
     const {
       patient_id,
       provider_id,
@@ -108,6 +110,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (
+      cpt_codes.some((code) => typeof code !== "string") ||
+      icd10_codes.some((code) => typeof code !== "string")
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "cpt_codes and icd10_codes must contain strings",
+        },
+        { status: 400 }
+      );
+    }
+
     const order: OrderInsert = {
       org_id: orgId,
       patient_id,
@@ -118,7 +133,7 @@ export async function POST(request: NextRequest) {
       clinic_notes_text: clinic_notes_text || null,
     };
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await client
       .from("order")
       .insert(order)
       .select()

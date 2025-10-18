@@ -4,13 +4,35 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser, getOrderById, supabase } from "@greenlight/db";
-import type { Database } from "@greenlight/db";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@greenlight/db/types/database";
+import { HttpError, getScopedClient, requireUser } from "../../_lib/org";
 
 type OrderRow = Database["public"]["Tables"]["order"]["Row"];
 type OrderUpdate = Partial<
   Pick<OrderRow, "modality" | "cpt_codes" | "icd10_codes" | "clinic_notes_text">
 >;
+
+type ScopedClient = SupabaseClient<Database>;
+
+const ORDER_SELECT = `
+  *,
+  patient:patient_id(*),
+  provider:provider_id(*)
+`;
+
+async function fetchOrderWithRelations(client: ScopedClient, id: string) {
+  return client.from("order").select(ORDER_SELECT).eq("id", id).single();
+}
+
+function validateCodeArray(
+  value: unknown,
+  field: "cpt_codes" | "icd10_codes"
+): asserts value is string[] {
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
+    throw new HttpError(400, `${field} must be an array of strings`);
+  }
+}
 
 /**
  * GET /api/orders/[id]
@@ -21,33 +43,41 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
+    const { token } = await requireUser(request);
+    const client = getScopedClient(token);
+    const { data, error } = await fetchOrderWithRelations(client, params.id);
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        return NextResponse.json(
+          { success: false, error: "Order not found" },
+          { status: 404 }
+        );
+      }
+      throw new HttpError(500, error.message);
     }
 
-    const { id } = params;
-    const result = await getOrderById(id);
-
-    if (!result.success) {
-      return NextResponse.json(
-        { success: false, error: result.error },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({ success: true, data: result.data });
+    return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error("Order get error:", error);
+    const status =
+      error instanceof HttpError ? error.status : /* default */ 500;
+    const message =
+      error instanceof HttpError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Internal server error";
+
+    if (!(error instanceof HttpError)) {
+      console.error("Order get error:", error);
+    }
+
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Internal server error",
+        error: message,
       },
-      { status: 500 }
+      { status }
     );
   }
 }
@@ -69,50 +99,29 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
+    const { token } = await requireUser(request);
+    const client = getScopedClient(token);
     const { id } = params;
-    const body = await request.json();
-    const {
-      modality,
-      cpt_codes,
-      icd10_codes,
-      clinic_notes_text,
-    }: {
-      modality?: OrderRow["modality"];
-      cpt_codes?: OrderRow["cpt_codes"];
-      icd10_codes?: OrderRow["icd10_codes"];
-      clinic_notes_text?: OrderRow["clinic_notes_text"];
-    } = body;
 
+    const body = await request.json();
     const updates: OrderUpdate = {};
-    if (modality) updates.modality = modality;
-    if (cpt_codes) {
-      if (!Array.isArray(cpt_codes)) {
-        return NextResponse.json(
-          { success: false, error: "cpt_codes must be an array" },
-          { status: 400 }
-        );
-      }
-      updates.cpt_codes = cpt_codes;
+
+    if (body.modality !== undefined) {
+      updates.modality = body.modality;
     }
-    if (icd10_codes) {
-      if (!Array.isArray(icd10_codes)) {
-        return NextResponse.json(
-          { success: false, error: "icd10_codes must be an array" },
-          { status: 400 }
-        );
-      }
-      updates.icd10_codes = icd10_codes;
+
+    if (body.cpt_codes !== undefined) {
+      validateCodeArray(body.cpt_codes, "cpt_codes");
+      updates.cpt_codes = body.cpt_codes;
     }
-    if (clinic_notes_text !== undefined) {
-      updates.clinic_notes_text = clinic_notes_text;
+
+    if (body.icd10_codes !== undefined) {
+      validateCodeArray(body.icd10_codes, "icd10_codes");
+      updates.icd10_codes = body.icd10_codes;
+    }
+
+    if (body.clinic_notes_text !== undefined) {
+      updates.clinic_notes_text = body.clinic_notes_text;
     }
 
     if (Object.keys(updates).length === 0) {
@@ -122,32 +131,51 @@ export async function PATCH(
       );
     }
 
-    const { error } = await supabase.from("order").update(updates).eq("id", id);
+    const { error } = await client
+      .from("order")
+      .update(updates)
+      .eq("id", id)
+      .select("id")
+      .single();
 
     if (error) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 500 }
-      );
+      if (error.code === "PGRST116") {
+        return NextResponse.json(
+          { success: false, error: "Order not found" },
+          { status: 404 }
+        );
+      }
+      throw new HttpError(500, error.message);
     }
 
-    const updated = await getOrderById(id);
-    if (!updated.success) {
-      return NextResponse.json(
-        { success: false, error: updated.error },
-        { status: 500 }
-      );
+    const { data: refreshed, error: refetchError } =
+      await fetchOrderWithRelations(client, id);
+
+    if (refetchError || !refreshed) {
+      throw new HttpError(500, refetchError?.message || "Failed to load order");
     }
 
-    return NextResponse.json({ success: true, data: updated.data });
+    return NextResponse.json({ success: true, data: refreshed });
   } catch (error) {
-    console.error("Order update error:", error);
+    const status =
+      error instanceof HttpError ? error.status : /* default */ 500;
+    const message =
+      error instanceof HttpError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Internal server error";
+
+    if (!(error instanceof HttpError)) {
+      console.error("Order update error:", error);
+    }
+
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Internal server error",
+        error: message,
       },
-      { status: 500 }
+      { status }
     );
   }
 }
@@ -161,20 +189,25 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
+    const { token } = await requireUser(request);
+    const client = getScopedClient(token);
     const { id } = params;
 
-    const { error } = await supabase.from("order").delete().eq("id", id);
+    const { error } = await client
+      .from("order")
+      .delete()
+      .eq("id", id)
+      .select("id")
+      .single();
 
     if (error) {
-      // Check if it's a foreign key constraint error
+      if (error.code === "PGRST116") {
+        return NextResponse.json(
+          { success: false, error: "Order not found" },
+          { status: 404 }
+        );
+      }
+
       if (error.message.includes("foreign key")) {
         return NextResponse.json(
           {
@@ -185,10 +218,8 @@ export async function DELETE(
           { status: 400 }
         );
       }
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 500 }
-      );
+
+      throw new HttpError(500, error.message);
     }
 
     return NextResponse.json({
@@ -196,13 +227,25 @@ export async function DELETE(
       data: { id, deleted: true },
     });
   } catch (error) {
-    console.error("Order delete error:", error);
+    const status =
+      error instanceof HttpError ? error.status : /* default */ 500;
+    const message =
+      error instanceof HttpError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "Internal server error";
+
+    if (!(error instanceof HttpError)) {
+      console.error("Order delete error:", error);
+    }
+
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : "Internal server error",
+        error: message,
       },
-      { status: 500 }
+      { status }
     );
   }
 }

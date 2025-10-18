@@ -4,17 +4,126 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@greenlight/db";
 import type { Database } from "@greenlight/db/types/database";
-import { HttpError, requireUser, resolveOrgId } from "../../_lib/org";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { HttpError, getScopedClient, requireUser } from "../../_lib/org";
 
 type PaRequestRow = Database["public"]["Tables"]["pa_request"]["Row"];
+type OrderRow = Database["public"]["Tables"]["order"]["Row"];
+type PatientRow = Database["public"]["Tables"]["patient"]["Row"];
+type ProviderRow = Database["public"]["Tables"]["provider"]["Row"];
+type PayerRow = Database["public"]["Tables"]["payer"]["Row"];
+type ChecklistItemRow =
+  Database["public"]["Tables"]["pa_checklist_item"]["Row"];
+type AttachmentRow = Database["public"]["Tables"]["attachment"]["Row"];
+type PaSummaryRow = Database["public"]["Tables"]["pa_summary"]["Row"];
+type StatusEventRow = Database["public"]["Tables"]["status_event"]["Row"];
+type PolicySnippetRow = Database["public"]["Tables"]["policy_snippet"]["Row"];
+
+type ChecklistItemWithAttachment = ChecklistItemRow & {
+  evidence_attachment?: AttachmentRow | null;
+};
+
+type OrderWithRelations = OrderRow & {
+  patient: PatientRow | null;
+  provider: ProviderRow | null;
+};
+
+type PaRequestWithDetails = PaRequestRow & {
+  order: OrderWithRelations | null;
+  payer: PayerRow | null;
+  checklist_items?: ChecklistItemWithAttachment[] | null;
+  summaries?: PaSummaryRow[] | null;
+  status_events?: StatusEventRow[] | null;
+};
+
 type PaRequestUpdate = Partial<Pick<PaRequestRow, "priority">>;
 
 const PRIORITIES: ReadonlyArray<PaRequestRow["priority"]> = [
   "standard",
   "urgent",
 ];
+
+type ScopedClient = SupabaseClient<Database>;
+
+async function fetchPaRequestWithDetails(client: ScopedClient, id: string) {
+  return client
+    .from("pa_request")
+    .select(
+      `
+      *,
+      order:order_id(
+        *,
+        patient:patient_id(*),
+        provider:provider_id(*)
+      ),
+      payer:payer_id(*),
+      checklist_items:pa_checklist_item(
+        *,
+        evidence_attachment:evidence_attachment_id(*)
+      ),
+      summaries:pa_summary(*),
+      status_events:status_event(*)
+    `
+    )
+    .eq("id", id)
+    .single();
+}
+
+async function buildPaResponse(
+  client: ScopedClient,
+  pa: PaRequestWithDetails
+): Promise<
+  PaRequestWithDetails & {
+    attachments: AttachmentRow[];
+    policy_snippets: PolicySnippetRow[];
+  }
+> {
+  const { data: attachments } = await client
+    .from("attachment")
+    .select("*")
+    .eq("org_id", pa.org_id)
+    .order("created_at", { ascending: false });
+
+  const modality = pa.order?.modality ?? undefined;
+  const payerId = pa.payer_id ?? null;
+  const cptCodes = Array.isArray(pa.order?.cpt_codes)
+    ? (pa.order?.cpt_codes as string[])
+    : [];
+
+  const policySnippets: PolicySnippetRow[] = [];
+
+  if (payerId && modality) {
+    const { data } = await client
+      .from("policy_snippet")
+      .select("*")
+      .eq("payer_id", payerId)
+      .ilike("modality", `%${modality}%`);
+    if (data) {
+      policySnippets.push(...data);
+    }
+  }
+
+  for (const code of cptCodes) {
+    const { data } = await client
+      .from("policy_snippet")
+      .select("*")
+      .eq("cpt_code", code);
+    if (data) {
+      policySnippets.push(...data);
+    }
+  }
+
+  const uniqueSnippets = Array.from(
+    new Map(policySnippets.map((snippet) => [snippet.id, snippet])).values()
+  );
+
+  return {
+    ...pa,
+    attachments: attachments ?? [],
+    policy_snippets: uniqueSnippets,
+  };
+}
 
 /**
  * GET /api/pa-requests/[id]
@@ -26,26 +135,10 @@ export async function GET(
 ) {
   try {
     const { id } = params;
-    const { user } = await requireUser(request);
+    const { token } = await requireUser(request);
+    const client = getScopedClient(token);
 
-    const { data, error } = await supabaseAdmin
-      .from("pa_request")
-      .select(
-        `
-        *,
-        order:order_id(
-          *,
-          patient:patient_id(*),
-          provider:provider_id(*)
-        ),
-        payer:payer_id(*),
-        checklist_items:pa_checklist_item(*),
-        summaries:pa_summary(*),
-        status_events:status_event(*)
-      `
-      )
-      .eq("id", id)
-      .single();
+    const { data, error } = await fetchPaRequestWithDetails(client, id);
 
     if (error) {
       if (error.code === "PGRST116") {
@@ -57,9 +150,12 @@ export async function GET(
       throw new HttpError(500, error.message);
     }
 
-    await resolveOrgId(user, data.org_id);
+    const enriched = await buildPaResponse(
+      client,
+      data as unknown as PaRequestWithDetails
+    );
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ success: true, data: enriched });
   } catch (error) {
     if (error instanceof HttpError) {
       return NextResponse.json(
@@ -107,7 +203,10 @@ export async function PATCH(
       priority?: PaRequestRow["priority"];
     } = body;
 
-    const { data: paRecord, error: fetchError } = await supabaseAdmin
+    const { user, token } = await requireUser(request);
+    const client = getScopedClient(token);
+
+    const { data: paRecord, error: fetchError } = await client
       .from("pa_request")
       .select("org_id")
       .eq("id", id)
@@ -117,39 +216,48 @@ export async function PATCH(
       throw new HttpError(404, "PA request not found");
     }
 
-    const { user } = await requireUser(request);
-    await resolveOrgId(user, paRecord.org_id);
-
-    // If status is being updated, handle via service role client
+    // If status is being updated, handle via scoped client
     if (status) {
-      const { data: updated, error: statusError } = await supabaseAdmin
+      const { error: statusError } = await client
         .from("pa_request")
         .update({ status })
         .eq("id", id)
-        .select()
+        .select("id")
         .single();
 
-      if (statusError || !updated) {
+      if (statusError) {
         throw new HttpError(
           500,
           statusError?.message || "Status update failed"
         );
       }
 
-      const { error: eventError } = await supabaseAdmin
-        .from("status_event")
-        .insert({
-          pa_request_id: id,
-          status,
-          note,
-          actor: user.id,
-        });
+      const { error: eventError } = await client.from("status_event").insert({
+        pa_request_id: id,
+        status,
+        note,
+        actor: user.id,
+      });
 
       if (eventError) {
         console.error("Failed to create status event:", eventError);
       }
 
-      return NextResponse.json({ success: true, data: updated });
+      const { data: refreshed, error: refetchError } =
+        await fetchPaRequestWithDetails(client, id);
+
+      if (refetchError || !refreshed) {
+        throw new HttpError(
+          500,
+          refetchError?.message || "Failed to load PA request"
+        );
+      }
+
+      const enriched = await buildPaResponse(
+        client,
+        refreshed as unknown as PaRequestWithDetails
+      );
+      return NextResponse.json({ success: true, data: enriched });
     }
 
     // Otherwise, update other fields directly
@@ -171,10 +279,12 @@ export async function PATCH(
       );
     }
 
-    const { error } = await supabaseAdmin
+    const { error } = await client
       .from("pa_request")
       .update(updates)
-      .eq("id", id);
+      .eq("id", id)
+      .select()
+      .single();
 
     if (error) {
       return NextResponse.json(
@@ -183,30 +293,22 @@ export async function PATCH(
       );
     }
 
-    const { data: updated, error: refetchError } = await supabaseAdmin
-      .from("pa_request")
-      .select(
-        `
-        *,
-        order:order_id(
-          *,
-          patient:patient_id(*),
-          provider:provider_id(*)
-        ),
-        payer:payer_id(*),
-        checklist_items:pa_checklist_item(*),
-        summaries:pa_summary(*),
-        status_events:status_event(*)
-      `
-      )
-      .eq("id", id)
-      .single();
+    const { data: refreshed, error: refetchError } =
+      await fetchPaRequestWithDetails(client, id);
 
-    if (refetchError || !updated) {
-      throw new HttpError(500, refetchError?.message || "Failed to fetch PA");
+    if (refetchError || !refreshed) {
+      throw new HttpError(
+        500,
+        refetchError?.message || "Failed to load PA request"
+      );
     }
 
-    return NextResponse.json({ success: true, data: updated });
+    const enriched = await buildPaResponse(
+      client,
+      refreshed as unknown as PaRequestWithDetails
+    );
+
+    return NextResponse.json({ success: true, data: enriched });
   } catch (error) {
     console.error("PA request update error:", error);
     return NextResponse.json(
@@ -229,25 +331,23 @@ export async function DELETE(
 ) {
   try {
     const { id } = params;
-    const { data: paRecord, error: fetchError } = await supabaseAdmin
-      .from("pa_request")
-      .select("org_id")
-      .eq("id", id)
-      .single();
+    const { token } = await requireUser(request);
+    const client = getScopedClient(token);
 
-    if (fetchError || !paRecord) {
-      throw new HttpError(404, "PA request not found");
-    }
-
-    const { user } = await requireUser(request);
-    await resolveOrgId(user, paRecord.org_id);
-
-    const { error } = await supabaseAdmin
+    const { data: deleted, error } = await client
       .from("pa_request")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .select("id")
+      .single();
 
     if (error) {
+      if (error.code === "PGRST116") {
+        return NextResponse.json(
+          { success: false, error: "PA request not found" },
+          { status: 404 }
+        );
+      }
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }
@@ -256,7 +356,7 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      data: { id, deleted: true },
+      data: { id: deleted?.id ?? id, deleted: true },
     });
   } catch (error) {
     if (error instanceof HttpError) {

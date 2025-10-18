@@ -283,6 +283,14 @@
 - ✅ Added shared API client util to forward Supabase access token from browser to server routes
 - ✅ Updated Supabase PKCE flow for email links and enforced org membership checks per request
 
+### 2025-10-17 - PA Request Creation Flow & API Alignment
+
+- ✅ Added `/dashboard/pa/new` page with order preselection, payer picker, and priority controls
+- ✅ Linked order list actions to the new PA creation flow and improved array-safe rendering for CPT/ICD codes
+- ✅ Refactored PA request, order, patient, and provider API routes to use scoped Supabase clients with stricter validation
+- ✅ Enriched PA detail API responses with typed attachments and deduplicated policy snippets
+- ✅ Ran `npm run lint`
+
 ### 2025-10-17 - Section 8 Complete (Metrics & Nudges)
 
 - ✅ Created comprehensive metrics dashboard

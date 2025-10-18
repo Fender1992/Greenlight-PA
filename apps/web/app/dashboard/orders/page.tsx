@@ -193,10 +193,18 @@ export default function OrdersPage() {
                           {order.modality}
                         </div>
                         <div className="text-xs text-gray-500">
-                          CPT: {order.cpt_codes.join(", ")}
+                          CPT:{" "}
+                          {Array.isArray(order.cpt_codes) &&
+                          order.cpt_codes.length > 0
+                            ? order.cpt_codes.join(", ")
+                            : "—"}
                         </div>
                         <div className="text-xs text-gray-500">
-                          ICD-10: {order.icd10_codes.join(", ")}
+                          ICD-10:{" "}
+                          {Array.isArray(order.icd10_codes) &&
+                          order.icd10_codes.length > 0
+                            ? order.icd10_codes.join(", ")
+                            : "—"}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

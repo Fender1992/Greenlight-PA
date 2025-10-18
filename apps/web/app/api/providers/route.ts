@@ -3,7 +3,6 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@greenlight/db";
 import type { Database } from "@greenlight/db/types/database";
 import { HttpError, getOrgContext } from "../_lib/org";
 
@@ -13,10 +12,13 @@ type ProviderUpdate = Database["public"]["Tables"]["provider"]["Update"];
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const { orgId } = await getOrgContext(request, searchParams.get("org_id"));
+    const { orgId, client } = await getOrgContext(
+      request,
+      searchParams.get("org_id")
+    );
     const search = searchParams.get("q")?.toLowerCase() ?? "";
 
-    let query = supabaseAdmin
+    let query = client
       .from("provider")
       .select("*")
       .eq("org_id", orgId)
@@ -55,7 +57,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { orgId } = await getOrgContext(request, body.org_id ?? null);
+    const { orgId, client } = await getOrgContext(request, body.org_id ?? null);
 
     if (!body.name) {
       throw new HttpError(400, "Provider name is required");
@@ -69,7 +71,7 @@ export async function POST(request: NextRequest) {
       location: body.location ?? null,
     };
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await client
       .from("provider")
       .insert(payload)
       .select()
@@ -103,7 +105,7 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { orgId } = await getOrgContext(request, body.org_id ?? null);
+    const { orgId, client } = await getOrgContext(request, body.org_id ?? null);
     const id = body.id as string | undefined;
     if (!id) {
       throw new HttpError(400, "Provider id is required");
@@ -117,7 +119,7 @@ export async function PATCH(request: NextRequest) {
       location: body.location ?? null,
     };
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await client
       .from("provider")
       .update(updates)
       .eq("id", id)
@@ -152,14 +154,14 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const { orgId } = await getOrgContext(request, null);
+    const { orgId, client } = await getOrgContext(request, null);
     const id = searchParams.get("id");
 
     if (!id) {
       throw new HttpError(400, "Provider id is required");
     }
 
-    const { error } = await supabaseAdmin
+    const { error } = await client
       .from("provider")
       .delete()
       .eq("id", id)

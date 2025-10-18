@@ -3,7 +3,6 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@greenlight/db";
 import type { Database } from "@greenlight/db/types/database";
 import { HttpError, getOrgContext } from "../_lib/org";
 
@@ -12,9 +11,12 @@ type PatientInsert = Database["public"]["Tables"]["patient"]["Insert"];
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const { orgId } = await getOrgContext(request, searchParams.get("org_id"));
+    const { orgId, client } = await getOrgContext(
+      request,
+      searchParams.get("org_id")
+    );
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await client
       .from("patient")
       .select("*")
       .eq("org_id", orgId)
@@ -48,7 +50,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { orgId } = await getOrgContext(request, body.org_id ?? null);
+    const { orgId, client } = await getOrgContext(request, body.org_id ?? null);
 
     const patient: PatientInsert = {
       org_id: orgId,
@@ -64,7 +66,7 @@ export async function POST(request: NextRequest) {
       throw new HttpError(400, "Patient name is required");
     }
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await client
       .from("patient")
       .insert(patient)
       .select()

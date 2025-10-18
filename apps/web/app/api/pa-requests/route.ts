@@ -4,7 +4,6 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@greenlight/db";
 import type { Database } from "@greenlight/db/types/database";
 import { HttpError, getOrgContext } from "../_lib/org";
 
@@ -18,11 +17,14 @@ type OrderRow = Database["public"]["Tables"]["order"]["Row"];
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const { orgId } = await getOrgContext(request, searchParams.get("org_id"));
+    const { orgId, client } = await getOrgContext(
+      request,
+      searchParams.get("org_id")
+    );
     const status = searchParams.get("status") || undefined;
     const patientId = searchParams.get("patient_id") || undefined;
 
-    let query = supabaseAdmin
+    let query = client
       .from("pa_request")
       .select(
         `
@@ -91,7 +93,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { user, orgId } = await getOrgContext(request, body.org_id ?? null);
+    const { user, orgId, client } = await getOrgContext(
+      request,
+      body.org_id ?? null
+    );
 
     const { order_id, payer_id, priority } = body;
     if (!order_id || !payer_id) {
@@ -107,7 +112,7 @@ export async function POST(request: NextRequest) {
       created_by: user.id,
     };
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await client
       .from("pa_request")
       .insert(payload)
       .select()
