@@ -1,0 +1,3 @@
+- [ ] Validation & testing scaffolding: add shared schema validation utilities, Vitest suites for CRUD APIs, Playwright flow coverage.
+- [ ] API hardening: remove lingering service-role usage, add audit logging for PA creation, consider rate limiting on read-heavy routes.
+- [ ] UX & docs: improve PA creation accessibility states, update docs with domain setup + Node/Vitest guidance.
