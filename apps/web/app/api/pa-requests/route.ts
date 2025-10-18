@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Database } from "@greenlight/db/types/database";
 import { HttpError, getOrgContext } from "../_lib/org";
+import { validatePaRequestCreate } from "@web/lib/validation";
 
 type PARequestInsert = Database["public"]["Tables"]["pa_request"]["Insert"];
 type OrderRow = Database["public"]["Tables"]["order"]["Row"];
@@ -93,21 +94,24 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const validation = validatePaRequestCreate(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { success: false, error: validation.error, issues: validation.issues },
+        { status: 400 }
+      );
+    }
+
     const { user, orgId, client } = await getOrgContext(
       request,
-      body.org_id ?? null
+      validation.data.org_id ?? null
     );
-
-    const { order_id, payer_id, priority } = body;
-    if (!order_id || !payer_id) {
-      throw new HttpError(400, "Missing required fields: order_id, payer_id");
-    }
 
     const payload: PARequestInsert = {
       org_id: orgId,
-      order_id,
-      payer_id,
-      priority: priority || "standard",
+      order_id: validation.data.order_id,
+      payer_id: validation.data.payer_id,
+      priority: validation.data.priority,
       status: "draft",
       created_by: user.id,
     };

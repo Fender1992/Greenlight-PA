@@ -5,6 +5,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Database } from "@greenlight/db/types/database";
 import { HttpError, getOrgContext } from "../_lib/org";
+import {
+  validateProviderCreate,
+  validateProviderUpdate,
+} from "@web/lib/validation";
 
 type ProviderInsert = Database["public"]["Tables"]["provider"]["Insert"];
 type ProviderUpdate = Database["public"]["Tables"]["provider"]["Update"];
@@ -57,18 +61,25 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { orgId, client } = await getOrgContext(request, body.org_id ?? null);
-
-    if (!body.name) {
-      throw new HttpError(400, "Provider name is required");
+    const validation = validateProviderCreate(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { success: false, error: validation.error, issues: validation.issues },
+        { status: 400 }
+      );
     }
+
+    const { orgId, client } = await getOrgContext(
+      request,
+      validation.data.org_id ?? null
+    );
 
     const payload: ProviderInsert = {
       org_id: orgId,
-      name: body.name,
-      npi: body.npi ?? null,
-      specialty: body.specialty ?? null,
-      location: body.location ?? null,
+      name: validation.data.name,
+      npi: validation.data.npi ?? null,
+      specialty: validation.data.specialty ?? null,
+      location: validation.data.location ?? null,
     };
 
     const { data, error } = await client
@@ -105,24 +116,31 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { orgId, client } = await getOrgContext(request, body.org_id ?? null);
-    const id = body.id as string | undefined;
-    if (!id) {
-      throw new HttpError(400, "Provider id is required");
+    const validation = validateProviderUpdate(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { success: false, error: validation.error, issues: validation.issues },
+        { status: 400 }
+      );
     }
+
+    const { orgId, client } = await getOrgContext(
+      request,
+      validation.data.org_id ?? null
+    );
 
     const updates: ProviderUpdate = {
       org_id: orgId,
-      name: body.name,
-      npi: body.npi ?? null,
-      specialty: body.specialty ?? null,
-      location: body.location ?? null,
+      name: validation.data.name,
+      npi: validation.data.npi ?? null,
+      specialty: validation.data.specialty ?? null,
+      location: validation.data.location ?? null,
     };
 
     const { data, error } = await client
       .from("provider")
       .update(updates)
-      .eq("id", id)
+      .eq("id", validation.data.id)
       .select()
       .single();
 

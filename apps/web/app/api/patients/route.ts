@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Database } from "@greenlight/db/types/database";
 import { HttpError, getOrgContext } from "../_lib/org";
+import { validatePatientCreate } from "@web/lib/validation";
 
 type PatientInsert = Database["public"]["Tables"]["patient"]["Insert"];
 
@@ -50,21 +51,28 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { orgId, client } = await getOrgContext(request, body.org_id ?? null);
+    const validation = validatePatientCreate(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { success: false, error: validation.error, issues: validation.issues },
+        { status: 400 }
+      );
+    }
+
+    const { orgId, client } = await getOrgContext(
+      request,
+      validation.data.org_id ?? null
+    );
 
     const patient: PatientInsert = {
       org_id: orgId,
-      name: body.name,
-      mrn: body.mrn ?? null,
-      dob: body.dob ?? null,
-      sex: body.sex ?? null,
-      phone: body.phone ?? null,
-      address: body.address ?? null,
+      name: validation.data.name,
+      mrn: validation.data.mrn ?? null,
+      dob: validation.data.dob ?? null,
+      sex: validation.data.sex ?? null,
+      phone: validation.data.phone ?? null,
+      address: validation.data.address ?? null,
     };
-
-    if (!patient.name) {
-      throw new HttpError(400, "Patient name is required");
-    }
 
     const { data, error } = await client
       .from("patient")

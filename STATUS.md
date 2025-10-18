@@ -1,6 +1,6 @@
 # Greenlight PA - Build Status
 
-**Last Updated:** 2025-10-17 (Auth-ready dashboard + real data)
+**Last Updated:** 2025-10-17 (Production-ready with enforced authentication)
 
 ---
 
@@ -110,13 +110,16 @@
 
 | Component          | Status      | Last Modified | Notes                                 |
 | ------------------ | ----------- | ------------- | ------------------------------------- |
-| Root Layout        | 🟢 Complete | 2025-10-17    | Basic layout with demo mode banner    |
+| Root Layout        | 🟢 Complete | 2025-10-17    | Clean production layout               |
 | Providers          | 🟢 Complete | 2025-10-17    | React Query + Toast providers         |
-| Home Page          | 🟢 Complete | 2025-10-17    | Landing page with navigation          |
+| Home Page          | 🟢 Complete | 2025-10-17    | Auth-only landing page                |
+| Favicon            | 🟢 Complete | 2025-10-17    | SVG icon with "G" logo                |
 | CI Pipeline        | 🟢 Complete | 2025-10-17    | Lint, typecheck, test, build, e2e     |
 | Toast System       | 🟢 Complete | 2025-10-17    | Context-based notifications           |
 | User Reset Script  | 🟢 Complete | 2025-10-17    | Interactive/non-interactive modes     |
 | Email Validation   | 🟢 Complete | 2025-10-17    | API endpoint + signup integration     |
+| PA Creation Page   | 🟢 Complete | 2025-10-17    | Order selection with Suspense         |
+| Domain Setup Docs  | 🟢 Complete | 2025-10-17    | Vercel + general DNS guides           |
 | **Database**       |             |               |                                       |
 | Schema             | 🟢 Complete | 2025-10-17    | 14 tables with full relationships     |
 | RLS Policies       | 🟢 Complete | 2025-10-17    | Multi-tenant isolation enforced       |
@@ -128,8 +131,10 @@
 | Tests              | 🟢 Complete | 2025-10-17    | RLS test structure                    |
 | **API Routes**     |             |               |                                       |
 | Attachments        | 🟢 Complete | 2025-10-17    | Upload, download, delete with Storage |
-| Orders             | 🟢 Complete | 2025-10-17    | CRUD endpoints with RLS               |
-| PA Requests        | 🟢 Complete | 2025-10-17    | CRUD + submit workflow validation     |
+| Orders             | 🟢 Complete | 2025-10-17    | Scoped client + validation            |
+| PA Requests        | 🟢 Complete | 2025-10-17    | Scoped client + enriched responses    |
+| Patients           | 🟢 Complete | 2025-10-17    | Scoped client with RLS                |
+| Providers          | 🟢 Complete | 2025-10-17    | Scoped client with RLS                |
 | OCR Jobs           | 🟢 Complete | 2025-10-17    | Processing endpoint + batch job       |
 | **Packages**       |             |               |                                       |
 | @greenlight/db     | 🟢 Complete | 2025-10-17    | Supabase client, types, queries       |
@@ -147,7 +152,8 @@
 | Admin Interface    | 🟢 Complete | 2025-10-17    | Payer mgmt, settings, users, audit    |
 | Metrics Dashboard  | 🟢 Complete | 2025-10-17    | KPIs, trends, payer/modality analysis |
 | Signup Page        | 🟢 Complete | 2025-10-17    | Email validation, password strength   |
-| Login Page         | 🟢 Complete | 2025-10-17    | PKCE auth flow                        |
+| Login Page         | 🟢 Complete | 2025-10-17    | PKCE auth, no demo bypass             |
+| Dashboard Layout   | 🟢 Complete | 2025-10-17    | Auth-enforced navigation              |
 | **Policy System**  |             |               |                                       |
 | @greenlight/policy | 🟢 Complete | 2025-10-17    | Scraper, normalizer, ingestion        |
 | Policy API         | 🟢 Complete | 2025-10-17    | Ingestion endpoint                    |
@@ -230,6 +236,33 @@
 ---
 
 ## Recent Changes
+
+### 2025-10-17 - Production Readiness & Security Hardening
+
+- ✅ Removed all demo/dummy user references from application
+  - Removed "Continue as Demo User" button from login page
+  - Removed demo mode banner from login page
+  - Removed dashboard button from landing page
+  - Changed fallback display name from "Demo User" to "Guest"
+  - Enforced proper authentication for dashboard access
+- ✅ Fixed runtime errors and build issues
+  - Added type check for attachment.ocr_text before calling .slice()
+  - Fixed prerender error in /dashboard/pa/new with Suspense boundary
+  - Created favicon (icon.svg) to prevent 404 errors
+- ✅ Refactored API routes with scoped Supabase clients
+  - Updated orders, pa-requests, patients, providers to use getScopedClient
+  - Replaced supabaseAdmin with scoped clients for RLS enforcement
+  - Added PGRST116 error detection for "not found" cases
+  - Enriched PA request responses with attachments and policy snippets
+  - Added validation for code arrays in orders API
+- ✅ Created new PA request creation flow
+  - Added /dashboard/pa/new page with order preselection
+  - Payer picker and priority controls
+  - Suspense boundary for proper SSR/SSG support
+- ✅ Created comprehensive domain setup documentation
+  - General domain setup guide (docs/domain-setup.md)
+  - Vercel-specific setup guide (docs/vercel-domain-setup.md)
+  - DNS configuration options and troubleshooting
 
 ### 2025-10-17 - User Management & Toast Notifications
 

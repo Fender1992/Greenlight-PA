@@ -4,9 +4,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@greenlight/db/types/database";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { HttpError, getScopedClient, requireUser } from "../../_lib/org";
+import { validateOrderUpdate } from "@web/lib/validation";
 
 type OrderRow = Database["public"]["Tables"]["order"]["Row"];
 type OrderUpdate = Partial<
@@ -23,15 +24,6 @@ const ORDER_SELECT = `
 
 async function fetchOrderWithRelations(client: ScopedClient, id: string) {
   return client.from("order").select(ORDER_SELECT).eq("id", id).single();
-}
-
-function validateCodeArray(
-  value: unknown,
-  field: "cpt_codes" | "icd10_codes"
-): asserts value is string[] {
-  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
-    throw new HttpError(400, `${field} must be an array of strings`);
-  }
 }
 
 /**
@@ -104,32 +96,28 @@ export async function PATCH(
     const { id } = params;
 
     const body = await request.json();
-    const updates: OrderUpdate = {};
-
-    if (body.modality !== undefined) {
-      updates.modality = body.modality;
-    }
-
-    if (body.cpt_codes !== undefined) {
-      validateCodeArray(body.cpt_codes, "cpt_codes");
-      updates.cpt_codes = body.cpt_codes;
-    }
-
-    if (body.icd10_codes !== undefined) {
-      validateCodeArray(body.icd10_codes, "icd10_codes");
-      updates.icd10_codes = body.icd10_codes;
-    }
-
-    if (body.clinic_notes_text !== undefined) {
-      updates.clinic_notes_text = body.clinic_notes_text;
-    }
-
-    if (Object.keys(updates).length === 0) {
+    const parsed = validateOrderUpdate(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: "No fields to update" },
+        { success: false, error: parsed.error, issues: parsed.issues },
         { status: 400 }
       );
     }
+
+    const updates: OrderUpdate = {
+      ...(parsed.data.modality
+        ? { modality: parsed.data.modality }
+        : undefined),
+      ...(parsed.data.cpt_codes
+        ? { cpt_codes: parsed.data.cpt_codes }
+        : undefined),
+      ...(parsed.data.icd10_codes
+        ? { icd10_codes: parsed.data.icd10_codes }
+        : undefined),
+      ...(parsed.data.clinic_notes_text !== undefined
+        ? { clinic_notes_text: parsed.data.clinic_notes_text ?? null }
+        : undefined),
+    };
 
     const { error } = await client
       .from("order")

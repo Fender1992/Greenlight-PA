@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Database } from "@greenlight/db/types/database";
 import { HttpError, getOrgContext } from "../_lib/org";
+import { validateOrderCreate } from "@web/lib/validation";
 
 type OrderInsert = Database["public"]["Tables"]["order"]["Insert"];
 
@@ -75,62 +76,27 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { orgId, client } = await getOrgContext(request, body.org_id ?? null);
-    const {
-      patient_id,
-      provider_id,
-      modality,
-      cpt_codes,
-      icd10_codes,
-      clinic_notes_text,
-    } = body;
-
-    if (
-      !patient_id ||
-      !provider_id ||
-      !modality ||
-      !cpt_codes ||
-      !icd10_codes
-    ) {
+    const validation = validateOrderCreate(body);
+    if (!validation.success) {
       return NextResponse.json(
-        {
-          success: false,
-          error:
-            "Missing required fields: org_id, patient_id, provider_id, modality, cpt_codes, icd10_codes",
-        },
+        { success: false, error: validation.error, issues: validation.issues },
         { status: 400 }
       );
     }
 
-    // Validate arrays
-    if (!Array.isArray(cpt_codes) || !Array.isArray(icd10_codes)) {
-      return NextResponse.json(
-        { success: false, error: "cpt_codes and icd10_codes must be arrays" },
-        { status: 400 }
-      );
-    }
-
-    if (
-      cpt_codes.some((code) => typeof code !== "string") ||
-      icd10_codes.some((code) => typeof code !== "string")
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "cpt_codes and icd10_codes must contain strings",
-        },
-        { status: 400 }
-      );
-    }
+    const { orgId, client } = await getOrgContext(
+      request,
+      validation.data.org_id ?? null
+    );
 
     const order: OrderInsert = {
       org_id: orgId,
-      patient_id,
-      provider_id,
-      modality,
-      cpt_codes,
-      icd10_codes,
-      clinic_notes_text: clinic_notes_text || null,
+      patient_id: validation.data.patient_id,
+      provider_id: validation.data.provider_id,
+      modality: validation.data.modality,
+      cpt_codes: validation.data.cpt_codes,
+      icd10_codes: validation.data.icd10_codes,
+      clinic_notes_text: validation.data.clinic_notes_text ?? null,
     };
 
     const { data, error } = await client

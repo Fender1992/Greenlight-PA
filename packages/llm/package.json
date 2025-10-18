@@ -6,7 +6,7 @@
   "types": "./index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --pool=forks --passWithNoTests"
+    "test": "vitest run --pool=threads --passWithNoTests"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
