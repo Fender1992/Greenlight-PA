@@ -102,31 +102,52 @@ export default function DashboardLayout({
               >
                 <Link
                   href="/dashboard"
-                  className="border-transparent text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium hover:border-gray-300"
+                  className={
+                    pathname === "/dashboard" ||
+                    pathname?.startsWith("/dashboard/pa")
+                      ? "border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                  }
                 >
                   Worklist
                 </Link>
                 <Link
                   href="/dashboard/patients"
-                  className="border-transparent text-gray-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium hover:border-gray-300"
+                  className={
+                    pathname === "/dashboard/patients"
+                      ? "border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                  }
                 >
                   Patients
                 </Link>
                 <Link
                   href="/dashboard/orders"
-                  className="border-transparent text-gray-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium hover:border-gray-300"
+                  className={
+                    pathname?.startsWith("/dashboard/orders")
+                      ? "border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                  }
                 >
                   Orders
                 </Link>
                 <Link
                   href="/dashboard/metrics"
-                  className="border-transparent text-gray-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium hover:border-gray-300"
+                  className={
+                    pathname === "/dashboard/metrics"
+                      ? "border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                  }
                 >
                   Metrics
                 </Link>
                 <Link
                   href="/dashboard/admin"
-                  className="border-transparent text-gray-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium hover:border-gray-300"
+                  className={
+                    pathname === "/dashboard/admin"
+                      ? "border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                  }
                 >
                   Admin
                 </Link>

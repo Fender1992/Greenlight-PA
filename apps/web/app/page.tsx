@@ -23,6 +23,12 @@ export default function Home() {
     setError(null);
     setMessage(null);
 
+    // Analytics: Track password login attempt
+    console.log("[Analytics] Password login attempted", {
+      timestamp: new Date().toISOString(),
+      method: "password",
+    });
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -32,6 +38,13 @@ export default function Home() {
       if (error) throw error;
 
       if (data.session) {
+        // Analytics: Track successful login
+        console.log("[Analytics] Login successful", {
+          timestamp: new Date().toISOString(),
+          method: "password",
+          userId: data.user?.id,
+        });
+
         // Set session cookies for API routes
         await fetch("/api/auth/set-session", {
           method: "POST",
@@ -46,6 +59,13 @@ export default function Home() {
         router.push("/dashboard");
       }
     } catch (err) {
+      // Analytics: Track login failure
+      console.log("[Analytics] Login failed", {
+        timestamp: new Date().toISOString(),
+        method: "password",
+        error: err instanceof Error ? err.message : "Unknown error",
+      });
+
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
       setLoading(false);
@@ -58,6 +78,12 @@ export default function Home() {
     setError(null);
     setMessage(null);
 
+    // Analytics: Track magic link attempt
+    console.log("[Analytics] Magic link requested", {
+      timestamp: new Date().toISOString(),
+      method: "magic_link",
+    });
+
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
@@ -68,8 +94,21 @@ export default function Home() {
 
       if (error) throw error;
 
+      // Analytics: Track magic link sent successfully
+      console.log("[Analytics] Magic link sent", {
+        timestamp: new Date().toISOString(),
+        method: "magic_link",
+      });
+
       setMessage("Check your email for the magic link!");
     } catch (err) {
+      // Analytics: Track magic link failure
+      console.log("[Analytics] Magic link failed", {
+        timestamp: new Date().toISOString(),
+        method: "magic_link",
+        error: err instanceof Error ? err.message : "Unknown error",
+      });
+
       setError(
         err instanceof Error ? err.message : "Failed to send magic link"
       );
@@ -89,17 +128,18 @@ export default function Home() {
           </p>
 
           {/* Why Greenlight Panel */}
-          <div className="space-y-6 mb-12">
+          <div className="space-y-6">
             <h2 className="text-xl font-semibold text-white">
               Why Greenlight?
             </h2>
-            <ul className="space-y-4">
+            <ul className="space-y-4" role="list">
               <li className="flex items-start">
                 <svg
                   className="h-6 w-6 text-blue-200 mr-3 flex-shrink-0"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"
@@ -118,6 +158,7 @@ export default function Home() {
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"
@@ -136,6 +177,7 @@ export default function Home() {
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"
@@ -154,6 +196,7 @@ export default function Home() {
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
+                  aria-hidden="true"
                 >
                   <path
                     strokeLinecap="round"
@@ -167,20 +210,6 @@ export default function Home() {
                 </span>
               </li>
             </ul>
-          </div>
-
-          {/* Demo Illustration Placeholder */}
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg opacity-20 blur-xl"></div>
-            <div className="relative bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
-              <p className="text-sm text-blue-100 italic">
-                "Greenlight cut our PA processing time by 70%. Our staff can now
-                focus on patient care instead of paperwork."
-              </p>
-              <p className="text-xs text-blue-200 mt-3">
-                — Dr. Sarah Chen, Radiology Director
-              </p>
-            </div>
           </div>
         </div>
       </div>
@@ -203,13 +232,18 @@ export default function Home() {
 
           {/* Error Message */}
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
+            <div
+              className="rounded-md bg-red-50 p-4"
+              role="alert"
+              aria-live="assertive"
+            >
               <div className="flex">
                 <div className="flex-shrink-0">
                   <svg
                     className="h-5 w-5 text-red-400"
                     viewBox="0 0 20 20"
                     fill="currentColor"
+                    aria-hidden="true"
                   >
                     <path
                       fillRule="evenodd"
@@ -227,13 +261,18 @@ export default function Home() {
 
           {/* Success Message */}
           {message && (
-            <div className="rounded-md bg-green-50 p-4">
+            <div
+              className="rounded-md bg-green-50 p-4"
+              role="status"
+              aria-live="polite"
+            >
               <div className="flex">
                 <div className="flex-shrink-0">
                   <svg
                     className="h-5 w-5 text-green-400"
                     viewBox="0 0 20 20"
                     fill="currentColor"
+                    aria-hidden="true"
                   >
                     <path
                       fillRule="evenodd"

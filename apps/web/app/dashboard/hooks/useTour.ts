@@ -7,7 +7,6 @@
 
 import { useEffect, useState } from "react";
 import { startProductTour } from "../components/ProductTour";
-import supabase from "@greenlight/db/client";
 
 export function useTour() {
   const [shouldShowTour, setShouldShowTour] = useState(false);
@@ -19,25 +18,18 @@ export function useTour() {
 
   const checkTourStatus = async () => {
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session) {
-        setLoading(false);
-        return;
-      }
-
+      // Use cookie-based auth (session cookie is automatically sent)
       const response = await fetch("/api/member/tour-status", {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
+        credentials: "include", // Ensure cookies are sent
       });
 
       if (response.ok) {
         const result = await response.json();
         const hasSeenTour = result.data?.has_seen_tour ?? false;
         setShouldShowTour(!hasSeenTour);
+      } else if (response.status === 401) {
+        // User not authenticated, don't show tour
+        setShouldShowTour(false);
       }
     } catch (error) {
       console.error("Error checking tour status:", error);
@@ -52,20 +44,15 @@ export function useTour() {
 
   const markTourComplete = async () => {
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session) return;
-
-      await fetch("/api/member/tour-status", {
+      // Use cookie-based auth
+      const response = await fetch("/api/member/tour-status", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
+        credentials: "include",
       });
 
-      setShouldShowTour(false);
+      if (response.ok) {
+        setShouldShowTour(false);
+      }
     } catch (error) {
       console.error("Error marking tour complete:", error);
     }

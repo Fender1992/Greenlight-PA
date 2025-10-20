@@ -6,6 +6,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getScopedClient, requireUser } from "../../_lib/org";
 
+/**
+ * GET /api/member/tour-status
+ *
+ * Retrieves the tour status for the authenticated user
+ */
 export async function GET(req: NextRequest) {
   try {
     const { user, token } = await requireUser(req);
@@ -19,7 +24,14 @@ export async function GET(req: NextRequest) {
       .single();
 
     if (memberError) {
-      console.error("Error fetching member tour status:", memberError);
+      console.error("[Tour Status] Error fetching member:", memberError);
+      // Return false if member not found (graceful degradation)
+      if (memberError.code === "PGRST116") {
+        return NextResponse.json({
+          success: true,
+          data: { has_seen_tour: false },
+        });
+      }
       return NextResponse.json(
         { error: "Failed to fetch tour status" },
         { status: 500 }
@@ -33,7 +45,12 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Unexpected error in tour-status GET:", error);
+    // Handle authentication errors
+    if (error instanceof Error && error.message.includes("unauthorized")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    console.error("[Tour Status] Unexpected error in GET:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -41,6 +58,11 @@ export async function GET(req: NextRequest) {
   }
 }
 
+/**
+ * POST /api/member/tour-status
+ *
+ * Marks the tour as seen for the authenticated user
+ */
 export async function POST(req: NextRequest) {
   try {
     const { user, token } = await requireUser(req);
@@ -53,7 +75,7 @@ export async function POST(req: NextRequest) {
       .eq("user_id", user.id);
 
     if (updateError) {
-      console.error("Error updating tour status:", updateError);
+      console.error("[Tour Status] Error updating tour status:", updateError);
       return NextResponse.json(
         { error: "Failed to update tour status" },
         { status: 500 }
@@ -65,10 +87,39 @@ export async function POST(req: NextRequest) {
       message: "Tour status updated successfully",
     });
   } catch (error) {
-    console.error("Unexpected error in tour-status POST:", error);
+    // Handle authentication errors
+    if (error instanceof Error && error.message.includes("unauthorized")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    console.error("[Tour Status] Unexpected error in POST:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
+}
+
+/**
+ * Reject unsupported methods
+ */
+export async function PUT() {
+  return NextResponse.json(
+    { error: "Method not allowed" },
+    { status: 405, headers: { Allow: "GET, POST" } }
+  );
+}
+
+export async function DELETE() {
+  return NextResponse.json(
+    { error: "Method not allowed" },
+    { status: 405, headers: { Allow: "GET, POST" } }
+  );
+}
+
+export async function PATCH() {
+  return NextResponse.json(
+    { error: "Method not allowed" },
+    { status: 405, headers: { Allow: "GET, POST" } }
+  );
 }
