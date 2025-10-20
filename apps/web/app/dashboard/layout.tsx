@@ -73,7 +73,7 @@ export default function DashboardLayout({
   const handleLogout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/login");
+      router.push("/");
     } catch (error) {
       console.error("Logout error:", error);
     }
@@ -184,7 +184,7 @@ export default function DashboardLayout({
                   )}
                   {!user && (
                     <Link
-                      href="/login"
+                      href="/"
                       className="text-sm text-blue-600 hover:text-blue-700"
                     >
                       Sign In

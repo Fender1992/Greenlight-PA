@@ -1,6 +1,6 @@
 # Greenlight PA - Build Status
 
-**Last Updated:** 2025-10-17 (Production-ready with enforced authentication)
+**Last Updated:** 2025-10-20 (Login page as landing page)
 
 ---
 
@@ -112,7 +112,7 @@
 | ------------------ | ----------- | ------------- | ------------------------------------- |
 | Root Layout        | 🟢 Complete | 2025-10-17    | Clean production layout               |
 | Providers          | 🟢 Complete | 2025-10-17    | React Query + Toast providers         |
-| Home Page          | 🟢 Complete | 2025-10-17    | Auth-only landing page                |
+| Home Page          | 🟢 Complete | 2025-10-20    | Login page as landing page            |
 | Favicon            | 🟢 Complete | 2025-10-17    | SVG icon with "G" logo                |
 | CI Pipeline        | 🟢 Complete | 2025-10-17    | Lint, typecheck, test, build, e2e     |
 | Toast System       | 🟢 Complete | 2025-10-17    | Context-based notifications           |
@@ -263,6 +263,22 @@
   - General domain setup guide (docs/domain-setup.md)
   - Vercel-specific setup guide (docs/vercel-domain-setup.md)
   - DNS configuration options and troubleshooting
+
+### 2025-10-20 - Login Page as Landing Page
+
+- ✅ Replaced simple landing page with full login page experience
+  - Moved login page content to root page (/)
+  - Added hero section with value propositions and customer testimonials
+  - Integrated email/password and magic link authentication
+  - Added metrics strip showing platform performance
+  - Included sign-up link for new users
+- ✅ Updated all route references from /login to /
+  - Dashboard logout now redirects to root
+  - Signup page "Sign in" link points to root
+  - Auth callback error redirects point to root
+  - Navigation "Sign In" link points to root
+- ✅ Created redirect from /login to / for backward compatibility
+- ✅ Verified build succeeds with all changes
 
 ### 2025-10-20 - Onboarding Tour & Auth Experience Refresh
 

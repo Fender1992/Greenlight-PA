@@ -22,14 +22,14 @@ export async function GET(request: Request) {
       if (error) {
         console.error("[Auth] Exchange error:", error);
         return NextResponse.redirect(
-          new URL("/login?error=auth_failed", request.url)
+          new URL("/?error=auth_failed", request.url)
         );
       }
 
       if (!data.session) {
         console.error("[Auth] No session returned from code exchange");
         return NextResponse.redirect(
-          new URL("/login?error=no_session", request.url)
+          new URL("/?error=no_session", request.url)
         );
       }
 
@@ -83,9 +83,7 @@ export async function GET(request: Request) {
       return response;
     } catch (error) {
       console.error("[Auth] Error exchanging code for session:", error);
-      return NextResponse.redirect(
-        new URL("/login?error=auth_failed", request.url)
-      );
+      return NextResponse.redirect(new URL("/?error=auth_failed", request.url));
     }
   }
 

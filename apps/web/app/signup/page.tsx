@@ -275,7 +275,7 @@ export default function SignupPage() {
 
           <div className="text-center">
             <a
-              href="/login"
+              href="/"
               className="font-medium text-blue-600 hover:text-blue-500"
             >
               Already have an account? Sign in
