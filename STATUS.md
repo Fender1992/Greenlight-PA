@@ -264,6 +264,14 @@
   - Vercel-specific setup guide (docs/vercel-domain-setup.md)
   - DNS configuration options and troubleshooting
 
+### 2025-10-20 - Onboarding Tour & Auth Experience Refresh
+
+- ✅ Redesigned login page with hero messaging, value props, and customer proof points
+- ✅ Added metrics strip and split layout to highlight platform benefits pre-login
+- ✅ Implemented first-login product tour using `driver.js` with navigation replay option
+- ✅ Added `/api/member/tour-status` endpoint + Supabase column to track onboarding completion
+- ✅ Hooked dashboard navigation and worklist components with `data-tour` anchors for guided steps
+
 ### 2025-10-17 - User Management & Toast Notifications
 
 - ✅ Created comprehensive user reset script (scripts/reset-users.ts)

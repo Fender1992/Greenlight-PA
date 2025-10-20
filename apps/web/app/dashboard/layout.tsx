@@ -6,10 +6,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import supabase from "@greenlight/db/client";
 import type { User } from "@supabase/supabase-js";
+import { useTour } from "./hooks/useTour";
 
 export default function DashboardLayout({
   children,
@@ -17,8 +18,11 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const { shouldShowTour, loading: tourLoading, startTour } = useTour();
 
   useEffect(() => {
     // Get initial session
@@ -36,6 +40,35 @@ export default function DashboardLayout({
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Trigger tour on first dashboard visit
+  useEffect(() => {
+    if (
+      !loading &&
+      !tourLoading &&
+      shouldShowTour &&
+      pathname === "/dashboard"
+    ) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        startTour();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, tourLoading, shouldShowTour, pathname, startTour]);
+
+  // Close profile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showProfileMenu && !target.closest(".relative")) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showProfileMenu]);
 
   const handleLogout = async () => {
     try {
@@ -63,7 +96,10 @@ export default function DashboardLayout({
                   Greenlight PA
                 </Link>
               </div>
-              <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+              <div
+                className="hidden sm:ml-6 sm:flex sm:space-x-8"
+                data-tour="navigation"
+              >
                 <Link
                   href="/dashboard"
                   className="border-transparent text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium hover:border-gray-300"
@@ -99,14 +135,52 @@ export default function DashboardLayout({
             <div className="flex items-center gap-4">
               {!loading && (
                 <>
-                  <span className="text-sm text-gray-700">{displayName}</span>
                   {user && (
-                    <button
-                      onClick={handleLogout}
-                      className="text-sm text-gray-500 hover:text-gray-700"
-                    >
-                      Logout
-                    </button>
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowProfileMenu(!showProfileMenu)}
+                        className="flex items-center text-sm text-gray-700 hover:text-gray-900"
+                      >
+                        <span>{displayName}</span>
+                        <svg
+                          className="ml-2 h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </button>
+                      {showProfileMenu && (
+                        <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                          <div className="py-1">
+                            <button
+                              onClick={() => {
+                                setShowProfileMenu(false);
+                                startTour();
+                              }}
+                              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                              Replay Product Tour
+                            </button>
+                            <button
+                              onClick={() => {
+                                setShowProfileMenu(false);
+                                handleLogout();
+                              }}
+                              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                              Logout
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
                   {!user && (
                     <Link
