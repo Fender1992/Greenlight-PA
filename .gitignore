@@ -50,3 +50,5 @@ playwright/.cache/
 # Misc
 *.tsbuildinfo
 .turbo
+.vercel
+.env*.local

@@ -41,18 +41,18 @@ export default function DashboardLayout({
     return () => subscription.unsubscribe();
   }, []);
 
-  // Trigger tour on first dashboard visit
+  // Trigger tour on first visit to any dashboard page
   useEffect(() => {
     if (
       !loading &&
       !tourLoading &&
       shouldShowTour &&
-      pathname === "/dashboard"
+      pathname?.startsWith("/dashboard")
     ) {
       // Small delay to ensure DOM is ready
       const timer = setTimeout(() => {
         startTour();
-      }, 500);
+      }, 1000); // Increased delay for better reliability
       return () => clearTimeout(timer);
     }
   }, [loading, tourLoading, shouldShowTour, pathname, startTour]);
