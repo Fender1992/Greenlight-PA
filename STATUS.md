@@ -1,6 +1,6 @@
 # Greenlight PA - Build Status
 
-**Last Updated:** 2025-10-20 (Login page as landing page)
+**Last Updated:** 2025-10-20 (Seed data fixed and database fully populated)
 
 ---
 
@@ -124,7 +124,7 @@
 | Schema             | 🟢 Complete | 2025-10-17    | 14 tables with full relationships     |
 | RLS Policies       | 🟢 Complete | 2025-10-17    | Multi-tenant isolation enforced       |
 | Migrations         | 🟢 Complete | 2025-10-17    | Initial schema + RLS policies         |
-| Seed Data          | 🟢 Complete | 2025-10-17    | Demo data with no PHI                 |
+| Seed Data          | 🟢 Complete | 2025-10-20    | Full demo data via REST API           |
 | Client             | 🟢 Complete | 2025-10-17    | Supabase client (anon + admin)        |
 | Types              | 🟢 Complete | 2025-10-17    | Full TypeScript types                 |
 | Query SDK          | 🟢 Complete | 2025-10-17    | RLS-guarded helper functions          |
@@ -236,6 +236,50 @@
 ---
 
 ## Recent Changes
+
+### 2025-10-20 - Complete Database Population with All Tables
+
+- ✅ Fixed seed-data-v2.sql script execution issues
+  - Resolved "more than one row returned by subquery" error
+  - Cleaned up duplicate providers and patients
+  - Created programmatic seed data scripts using Supabase REST API
+- ✅ Successfully populated ALL database tables (13 tables total)
+  - **Core Data:**
+    - 1 organization with 1 member
+    - 4 providers (Dr. Rodriguez, Dr. Chen, Dr. Johnson, Dr. Williams)
+    - 5 patients (John Anderson, Maria Garcia, Robert Thompson, Lisa Martinez, David Lee)
+    - 5 coverage records (BCBS PPO, UHC Choice, Aetna HMO, BCBS HMO, Medicare Part B)
+    - 13 payers (BlueCross BlueShield, Aetna, UnitedHealthcare, Cigna, Medicare, etc.)
+    - 10 policy snippets (MRI Brain, CT Chest, MRI Lumbar Spine, CT Abdomen/Pelvis)
+  - **PA Workflow Data:**
+    - 5 orders (2× MRI Brain, MRI Lumbar Spine, CT Chest, CT Abdomen/Pelvis)
+    - 4 PA requests (draft, submitted, pending_info, approved with various priorities)
+    - 14 checklist items across all PA requests
+    - 6 PA summaries (medical necessity, indications, risk/benefit)
+    - 18 status events tracking PA lifecycle
+    - 5 mock attachments (clinical notes, imaging, lab results)
+    - 16 audit log entries tracking all actions
+- ✅ Created comprehensive utility scripts in /tmp/
+  - run-seed.js - Programmatic seed data insertion via REST API
+  - complete-seed.js - Tour status reset and verification
+  - create-orders-rest.js - Order and PA request creation
+  - cleanup-duplicates.js - Duplicate record cleanup
+  - create-pa-requests.js - PA request creation with proper statuses
+  - populate-missing-tables.js - Checklist, summary, status events, audit logs
+  - create-mock-attachments.js - Mock attachment records with OCR text
+  - create-coverage-data.js - Insurance coverage for all patients
+  - check-all-tables.js - Verification script for all tables
+- ✅ Verified tour functionality is working globally across dashboard
+  - Tour triggers on first visit to any /dashboard/\* page
+  - "Replay Product Tour" option available in profile menu
+  - Tour status properly tracked in member table
+- ✅ All API endpoints now returning complete data
+  - Worklist showing 4 PA requests with full details
+  - Orders page showing 5 orders with patient/provider information
+  - Patients page showing 5 patient records with coverage
+  - PA detail pages showing checklists, summaries, attachments, status history
+  - Admin audit log showing 16 tracked events
+  - Metrics dashboard showing aggregated statistics
 
 ### 2025-10-17 - Production Readiness & Security Hardening
 

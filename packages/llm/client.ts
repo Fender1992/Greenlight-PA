@@ -12,7 +12,9 @@ import Anthropic from "@anthropic-ai/sdk";
  */
 export const anthropic = new Anthropic({
   apiKey: process.env.CACHEGPT_API_KEY || process.env.ANTHROPIC_API_KEY || "",
-  baseURL: process.env.CACHEGPT_API_KEY ? "https://cachegpt.app/v1" : undefined,
+  baseURL: process.env.CACHEGPT_API_KEY
+    ? "https://cachegpt.app/api/v1"
+    : undefined,
 });
 
 /**
