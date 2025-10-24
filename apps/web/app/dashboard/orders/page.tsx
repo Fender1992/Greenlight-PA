@@ -62,6 +62,7 @@ export default function OrdersPage() {
   const orders = data ?? [];
 
   const filteredOrders = useMemo(() => {
+    if (!Array.isArray(orders)) return [];
     const query = searchQuery.toLowerCase();
     if (!query) return orders;
     return orders.filter((order) => {
@@ -78,6 +79,7 @@ export default function OrdersPage() {
 
   // Paginate filtered results
   const paginatedOrders = useMemo(() => {
+    if (!Array.isArray(filteredOrders)) return [];
     const start = (page - 1) * pageSize;
     const end = start + pageSize;
     return filteredOrders.slice(start, end);

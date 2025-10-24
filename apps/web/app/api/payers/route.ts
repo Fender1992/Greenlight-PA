@@ -49,8 +49,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireOrgAdmin(request, null);
+    // NOTE: Payers are GLOBAL resources (no org_id). Creating payers requires
+    // org admin privileges but affects all organizations. For single-org admins
+    // this is fine. Multi-org admins will need to pass org_id in query/body.
+    const { searchParams } = new URL(request.url);
     const body = await request.json();
+    const orgIdParam = searchParams.get("org_id") || body.org_id || null;
+    await requireOrgAdmin(request, orgIdParam);
 
     if (!body.name) {
       throw new HttpError(400, "Payer name is required");
@@ -96,8 +101,19 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    await requireOrgAdmin(request, null);
+    const { searchParams } = new URL(request.url);
     const body = await request.json();
+    const orgIdParam = searchParams.get("org_id") || body.org_id || null;
+
+    if (!orgIdParam) {
+      throw new HttpError(
+        400,
+        "org_id parameter is required for payer updates"
+      );
+    }
+
+    await requireOrgAdmin(request, orgIdParam);
+
     const id = body.id as string | undefined;
     if (!id) {
       throw new HttpError(400, "Payer id is required");
@@ -146,13 +162,22 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const { user } = await requireOrgAdmin(request, null);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
+    const orgIdParam = searchParams.get("org_id");
 
     if (!id) {
       throw new HttpError(400, "Payer id is required");
     }
+
+    if (!orgIdParam) {
+      throw new HttpError(
+        400,
+        "org_id parameter is required for payer deletion"
+      );
+    }
+
+    const { user } = await requireOrgAdmin(request, orgIdParam);
 
     const { error } = await supabaseAdmin.from("payer").delete().eq("id", id);
     if (error) {

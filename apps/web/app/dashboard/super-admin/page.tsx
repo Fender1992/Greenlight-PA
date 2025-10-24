@@ -5,9 +5,11 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@web/lib/toast";
+import supabase from "@greenlight/db/client";
 
 type SuperAdminTab = "overview" | "organizations" | "users" | "system";
 
@@ -57,6 +59,7 @@ interface User {
 }
 
 export default function SuperAdminPage() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { showToast, confirm } = useToast();
   const [activeTab, setActiveTab] = useState<SuperAdminTab>("overview");
@@ -64,6 +67,44 @@ export default function SuperAdminPage() {
   const [showCreateOrgForm, setShowCreateOrgForm] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
   const [newOrgDomain, setNewOrgDomain] = useState("");
+  const [isVerifying, setIsVerifying] = useState(true);
+
+  // Verify user is a super admin via API (bypasses RLS)
+  useEffect(() => {
+    const verifySuperAdmin = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.user) {
+        router.push("/dashboard");
+        return;
+      }
+
+      // Use stats API to verify access instead of direct table query
+      // Stats endpoint checks super admin status server-side
+      try {
+        const response = await fetch("/api/super-admin/stats");
+        const data = await response.json();
+
+        if (!data.success) {
+          // Not a super admin or access denied
+          showToast("You do not have access to this page", "error");
+          router.push("/dashboard");
+          return;
+        }
+
+        // Successfully accessed super admin endpoint
+        setIsVerifying(false);
+      } catch (error) {
+        console.error("Super admin verification failed:", error);
+        showToast("Access verification failed", "error");
+        router.push("/dashboard");
+      }
+    };
+
+    verifySuperAdmin();
+  }, [router, showToast]);
 
   // Fetch statistics
   const statsQuery = useQuery({
@@ -284,6 +325,18 @@ export default function SuperAdminPage() {
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.org_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Show loading state while verifying access
+  if (isVerifying) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+          <p className="mt-4 text-gray-600">Verifying access...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 sm:px-0">

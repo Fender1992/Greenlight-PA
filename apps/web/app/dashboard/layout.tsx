@@ -61,26 +61,36 @@ export default function DashboardLayout({
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setUser(session?.user ?? null);
 
-      // Fetch user's role from member table and check super admin status
+      // Fetch user's memberships and check super admin status
       if (session?.user) {
-        const { data: memberData } = await supabase
+        // Get all active memberships for the user
+        const { data: memberships } = await supabase
           .from("member")
-          .select("role")
+          .select("role, org_id, status")
           .eq("user_id", session.user.id)
-          .single();
+          .eq("status", "active")
+          .order("created_at", { ascending: true });
 
-        if (memberData) {
-          setUserRole(memberData.role as "admin" | "staff" | "referrer");
+        if (memberships && memberships.length > 0) {
+          // Use the first (oldest) membership for role display
+          // If user is admin in ANY org, show admin tab
+          const hasAdminRole = memberships.some((m) => m.role === "admin");
+          setUserRole(
+            hasAdminRole
+              ? "admin"
+              : (memberships[0].role as "admin" | "staff" | "referrer")
+          );
         }
 
-        // Check if user is super admin
-        const { data: superAdminData } = await supabase
+        // Check if user is super admin (will fail gracefully with RLS)
+        const { data: superAdminData, error: superAdminError } = await supabase
           .from("super_admin")
           .select("id")
           .eq("user_id", session.user.id)
-          .single();
+          .maybeSingle();
 
-        setIsSuperAdmin(!!superAdminData);
+        // Only set if we got data without error, otherwise assume not super admin
+        setIsSuperAdmin(!superAdminError && !!superAdminData);
       }
 
       setLoading(false);
@@ -92,26 +102,37 @@ export default function DashboardLayout({
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
 
-      // Fetch role and super admin status when session changes
+      // Fetch memberships and super admin status when session changes
       if (session?.user) {
-        const { data: memberData } = await supabase
+        // Get all active memberships for the user
+        const { data: memberships } = await supabase
           .from("member")
-          .select("role")
+          .select("role, org_id, status")
           .eq("user_id", session.user.id)
-          .single();
+          .eq("status", "active")
+          .order("created_at", { ascending: true });
 
-        if (memberData) {
-          setUserRole(memberData.role as "admin" | "staff" | "referrer");
+        if (memberships && memberships.length > 0) {
+          // If user is admin in ANY org, show admin tab
+          const hasAdminRole = memberships.some((m) => m.role === "admin");
+          setUserRole(
+            hasAdminRole
+              ? "admin"
+              : (memberships[0].role as "admin" | "staff" | "referrer")
+          );
+        } else {
+          setUserRole(null);
         }
 
-        // Check if user is super admin
-        const { data: superAdminData } = await supabase
+        // Check if user is super admin (will fail gracefully with RLS)
+        const { data: superAdminData, error: superAdminError } = await supabase
           .from("super_admin")
           .select("id")
           .eq("user_id", session.user.id)
-          .single();
+          .maybeSingle();
 
-        setIsSuperAdmin(!!superAdminData);
+        // Only set if we got data without error, otherwise assume not super admin
+        setIsSuperAdmin(!superAdminError && !!superAdminData);
       } else {
         setUserRole(null);
         setIsSuperAdmin(false);
@@ -148,7 +169,9 @@ export default function DashboardLayout({
 
         if (data.success) {
           setNotifications(data.data);
-          setUnreadCount(data.data.filter((n) => !n.read).length);
+          setUnreadCount(
+            data.data.filter((n: { read: boolean }) => !n.read).length
+          );
         }
       } catch (error) {
         console.error("Failed to load notifications:", error);

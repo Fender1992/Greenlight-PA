@@ -4,8 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@greenlight/db/server";
 import { supabaseAdmin } from "@greenlight/db";
+import { HttpError, requireUser } from "../_lib/org";
 
 /**
  * GET /api/notifications
@@ -14,20 +14,7 @@ import { supabaseAdmin } from "@greenlight/db";
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-
-    // Verify user is authenticated
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const { user } = await requireUser(request);
 
     const { searchParams } = new URL(request.url);
     const unreadOnly = searchParams.get("unread_only") === "true";
@@ -46,10 +33,7 @@ export async function GET(request: NextRequest) {
 
     if (notificationsError) {
       console.error("Error fetching notifications:", notificationsError);
-      return NextResponse.json(
-        { success: false, error: "Failed to fetch notifications" },
-        { status: 500 }
-      );
+      throw new HttpError(500, "Failed to fetch notifications");
     }
 
     return NextResponse.json({
@@ -57,6 +41,13 @@ export async function GET(request: NextRequest) {
       data: notifications || [],
     });
   } catch (error) {
+    if (error instanceof HttpError) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: error.status }
+      );
+    }
+
     console.error("Notifications fetch error:", error);
     return NextResponse.json(
       {
@@ -78,21 +69,7 @@ export async function GET(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const supabase = await createClient();
-
-    // Verify user is authenticated
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
+    const { user } = await requireUser(request);
     const body = await request.json();
     const { notificationId, markAllAsRead } = body;
 
@@ -106,10 +83,7 @@ export async function PATCH(request: NextRequest) {
 
       if (updateError) {
         console.error("Error marking all notifications as read:", updateError);
-        return NextResponse.json(
-          { success: false, error: "Failed to mark notifications as read" },
-          { status: 500 }
-        );
+        throw new HttpError(500, "Failed to mark notifications as read");
       }
 
       return NextResponse.json({
@@ -126,10 +100,7 @@ export async function PATCH(request: NextRequest) {
 
       if (updateError) {
         console.error("Error marking notification as read:", updateError);
-        return NextResponse.json(
-          { success: false, error: "Failed to mark notification as read" },
-          { status: 500 }
-        );
+        throw new HttpError(500, "Failed to mark notification as read");
       }
 
       return NextResponse.json({
@@ -137,15 +108,16 @@ export async function PATCH(request: NextRequest) {
         message: "Notification marked as read",
       });
     } else {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Must provide notificationId or markAllAsRead",
-        },
-        { status: 400 }
-      );
+      throw new HttpError(400, "Must provide notificationId or markAllAsRead");
     }
   } catch (error) {
+    if (error instanceof HttpError) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: error.status }
+      );
+    }
+
     console.error("Notification update error:", error);
     return NextResponse.json(
       {
@@ -167,29 +139,12 @@ export async function PATCH(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = await createClient();
-
-    // Verify user is authenticated
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
+    const { user } = await requireUser(request);
     const { searchParams } = new URL(request.url);
     const notificationId = searchParams.get("id");
 
     if (!notificationId) {
-      return NextResponse.json(
-        { success: false, error: "Notification ID is required" },
-        { status: 400 }
-      );
+      throw new HttpError(400, "Notification ID is required");
     }
 
     const { error: deleteError } = await supabaseAdmin
@@ -200,10 +155,7 @@ export async function DELETE(request: NextRequest) {
 
     if (deleteError) {
       console.error("Error deleting notification:", deleteError);
-      return NextResponse.json(
-        { success: false, error: "Failed to delete notification" },
-        { status: 500 }
-      );
+      throw new HttpError(500, "Failed to delete notification");
     }
 
     return NextResponse.json({
@@ -211,6 +163,13 @@ export async function DELETE(request: NextRequest) {
       message: "Notification deleted successfully",
     });
   } catch (error) {
+    if (error instanceof HttpError) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: error.status }
+      );
+    }
+
     console.error("Notification delete error:", error);
     return NextResponse.json(
       {

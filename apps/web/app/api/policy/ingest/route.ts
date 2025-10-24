@@ -30,8 +30,11 @@ import { HttpError, requireOrgAdmin } from "../../_lib/org";
  */
 export async function POST(request: Request) {
   try {
-    // Admin check
-    await requireOrgAdmin(request, null);
+    const body = await request.json();
+    const orgIdParam = body.org_id || null;
+
+    // Admin check - requires explicit org_id for multi-org users
+    await requireOrgAdmin(request, orgIdParam);
 
     // Feature flag check
     if (process.env.ENABLE_POLICY_INGESTION !== "true") {
@@ -45,7 +48,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json();
     const { payer_id, payer_name, base_url } = body;
 
     // Validation

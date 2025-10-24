@@ -82,6 +82,7 @@ export default function WorklistPage() {
   const paRequests = data ?? [];
 
   const filteredRequests = useMemo(() => {
+    if (!Array.isArray(paRequests)) return [];
     const query = searchQuery.toLowerCase();
     return paRequests.filter((req) => {
       const matchesStatus =
@@ -99,6 +100,7 @@ export default function WorklistPage() {
 
   // Paginate filtered results
   const paginatedRequests = useMemo(() => {
+    if (!Array.isArray(filteredRequests)) return [];
     const start = (page - 1) * pageSize;
     const end = start + pageSize;
     return filteredRequests.slice(start, end);

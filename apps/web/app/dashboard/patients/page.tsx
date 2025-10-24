@@ -101,6 +101,7 @@ export default function PatientsPage() {
   });
 
   const filteredPatients = useMemo(() => {
+    if (!Array.isArray(patients)) return [];
     const query = searchQuery.toLowerCase();
     if (!query) return patients;
     return patients.filter((patient) => {
@@ -114,6 +115,7 @@ export default function PatientsPage() {
 
   // Paginate filtered results
   const paginatedPatients = useMemo(() => {
+    if (!Array.isArray(filteredPatients)) return [];
     const start = (page - 1) * pageSize;
     const end = start + pageSize;
     return filteredPatients.slice(start, end);

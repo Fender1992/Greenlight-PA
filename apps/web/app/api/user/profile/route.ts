@@ -4,8 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@greenlight/db/server";
 import { supabaseAdmin } from "@greenlight/db";
+import { HttpError, requireUser } from "../../_lib/org";
 
 /**
  * PATCH /api/user/profile
@@ -15,20 +15,7 @@ import { supabaseAdmin } from "@greenlight/db";
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const supabase = await createClient();
-
-    // Verify user is authenticated
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const { user } = await requireUser(request);
 
     const body = await request.json();
     const { phoneNumber, address } = body;
@@ -55,6 +42,13 @@ export async function PATCH(request: NextRequest) {
       message: "Profile updated successfully",
     });
   } catch (error) {
+    if (error instanceof HttpError) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: error.status }
+      );
+    }
+
     console.error("Profile update error:", error);
     return NextResponse.json(
       {

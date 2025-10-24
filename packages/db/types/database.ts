@@ -53,6 +53,10 @@ export interface Database {
           role: string;
           status: string;
           has_seen_tour: boolean;
+          first_name: string | null;
+          last_name: string | null;
+          phone_number: string | null;
+          address: string | null;
           created_at: string;
         };
         Insert: {
@@ -62,6 +66,10 @@ export interface Database {
           role?: string;
           status?: string;
           has_seen_tour?: boolean;
+          first_name?: string | null;
+          last_name?: string | null;
+          phone_number?: string | null;
+          address?: string | null;
           created_at?: string;
         };
         Update: {
@@ -71,6 +79,10 @@ export interface Database {
           role?: string;
           status?: string;
           has_seen_tour?: boolean;
+          first_name?: string | null;
+          last_name?: string | null;
+          phone_number?: string | null;
+          address?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -489,6 +501,93 @@ export interface Database {
           subject_id?: string | null;
           meta_json?: Json | null;
           at?: string;
+        };
+        Relationships: [];
+      };
+      notification: {
+        Row: {
+          id: string;
+          user_id: string;
+          org_id: string | null;
+          type: string;
+          title: string;
+          message: string;
+          link: string | null;
+          metadata: Json | null;
+          read: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          org_id?: string | null;
+          type: string;
+          title: string;
+          message: string;
+          link?: string | null;
+          metadata?: Json | null;
+          read?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          org_id?: string | null;
+          type?: string;
+          title?: string;
+          message?: string;
+          link?: string | null;
+          metadata?: Json | null;
+          read?: boolean;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      name_change_request: {
+        Row: {
+          id: string;
+          member_id: string;
+          org_id: string;
+          current_first_name: string | null;
+          current_last_name: string | null;
+          requested_first_name: string;
+          requested_last_name: string;
+          status: string;
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          denial_reason: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          member_id: string;
+          org_id: string;
+          current_first_name?: string | null;
+          current_last_name?: string | null;
+          requested_first_name: string;
+          requested_last_name: string;
+          status?: string;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          denial_reason?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          member_id?: string;
+          org_id?: string;
+          current_first_name?: string | null;
+          current_last_name?: string | null;
+          requested_first_name?: string;
+          requested_last_name?: string;
+          status?: string;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          denial_reason?: string | null;
+          created_at?: string;
+          updated_at?: string;
         };
         Relationships: [];
       };

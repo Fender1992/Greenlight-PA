@@ -76,8 +76,14 @@ export async function requireUser(
  * Resolves an organization id either from an explicit query parameter
  * or from the authenticated user's ACTIVE memberships.
  * Super admins have access to all organizations.
+ *
+ * For multi-org users, an org_id MUST be provided to avoid ambiguity.
  */
-export async function resolveOrgId(user: User, providedOrgId: string | null) {
+export async function resolveOrgId(
+  user: User,
+  providedOrgId: string | null,
+  options: { allowAmbiguous?: boolean } = {}
+): Promise<string> {
   // Check if user is a super admin
   const superAdmin = await isSuperAdmin(user.id);
 
@@ -97,25 +103,20 @@ export async function resolveOrgId(user: User, providedOrgId: string | null) {
       return providedOrgId;
     }
 
-    // If no org provided, return the first org (super admins need to specify org_id)
-    const { data: orgs } = await supabaseAdmin
-      .from("org")
-      .select("id")
-      .limit(1);
-
-    if (!orgs || orgs.length === 0) {
-      throw new HttpError(404, "No organizations found in system");
-    }
-
-    return orgs[0].id;
+    // Super admins MUST specify org_id for admin operations
+    throw new HttpError(
+      400,
+      "org_id parameter is required for super admin operations. Please specify the target organization using the org_id query parameter or in the request body."
+    );
   }
 
   // Regular user - check active memberships
   const { data, error } = await supabaseAdmin
     .from("member")
-    .select("org_id, status")
+    .select("org_id, status, role")
     .eq("user_id", user.id)
-    .eq("status", "active"); // Only active memberships
+    .eq("status", "active")
+    .order("created_at", { ascending: true }); // Deterministic ordering
 
   if (error) {
     console.error("Failed to fetch organization memberships", error);
@@ -153,6 +154,15 @@ export async function resolveOrgId(user: User, providedOrgId: string | null) {
     throw new HttpError(404, "No active organization found for current user");
   }
 
+  // Multi-org users must specify which org for admin operations
+  if (memberships.length > 1 && !options.allowAmbiguous) {
+    throw new HttpError(
+      400,
+      `org_id parameter is required. You have ${memberships.length} organization memberships. Please specify which organization using the org_id query parameter or in the request body.`
+    );
+  }
+
+  // Return first membership (oldest) for single-org users or when ambiguous is allowed
   return memberships[0];
 }
 
@@ -194,29 +204,61 @@ export function getScopedClient(token: string) {
 
 export async function getOrgContext(
   request: Request,
-  providedOrgId: string | null
+  providedOrgId: string | null,
+  options: { allowAmbiguous?: boolean } = {}
 ) {
   const { user, token } = await requireUser(request);
-  const orgId = await resolveOrgId(user, providedOrgId);
+  const orgId = await resolveOrgId(user, providedOrgId, options);
   const role = await resolveOrgRole(user, orgId);
   const client = getScopedClient(token);
   return { user, token, orgId, role, client };
 }
 
 /**
- * Requires the authenticated user to have admin role in the organization.
+ * Requires the authenticated user to have admin role in a specific organization.
  * Throws 403 if user is not an admin. Super admins are allowed.
+ *
+ * IMPORTANT: For admin operations, org_id MUST be provided explicitly to ensure
+ * the admin check is for the correct organization. This prevents multi-org admins
+ * from accidentally performing admin actions on the wrong org.
  */
 export async function requireOrgAdmin(
   request: Request,
   providedOrgId: string | null
 ) {
-  const context = await getOrgContext(request, providedOrgId);
+  // Admin operations should never be ambiguous - require explicit org
+  const context = await getOrgContext(request, providedOrgId, {
+    allowAmbiguous: false,
+  });
+
   if (context.role !== "admin" && context.role !== "super_admin") {
     throw new HttpError(
       403,
       "This operation requires admin privileges in the organization"
     );
   }
+
   return context;
+}
+
+/**
+ * Gets user's admin memberships across all organizations.
+ * Returns array of org_ids where user has admin role.
+ */
+export async function getUserAdminOrgs(userId: string): Promise<string[]> {
+  // Super admins are admin in all orgs
+  if (await isSuperAdmin(userId)) {
+    const { data: orgs } = await supabaseAdmin.from("org").select("id");
+    return orgs?.map((o) => o.id) ?? [];
+  }
+
+  // Get all active admin memberships
+  const { data } = await supabaseAdmin
+    .from("member")
+    .select("org_id")
+    .eq("user_id", userId)
+    .eq("role", "admin")
+    .eq("status", "active");
+
+  return data?.map((m) => m.org_id) ?? [];
 }

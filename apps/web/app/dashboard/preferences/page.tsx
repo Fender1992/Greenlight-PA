@@ -64,16 +64,15 @@ export default function PreferencesPage() {
 
       setEmail(user.email || "");
 
-      // Fetch member data
-      const { data: memberData, error } = await supabase
+      // Fetch member data with profile fields
+      const { data: memberData } = await supabase
         .from("member")
         .select("first_name, last_name, phone_number, address")
         .eq("user_id", user.id)
-        .single();
+        .eq("status", "active")
+        .maybeSingle();
 
-      if (error) {
-        console.error("Error loading profile:", error);
-      } else if (memberData) {
+      if (memberData) {
         setFirstName(memberData.first_name || "");
         setLastName(memberData.last_name || "");
         setPhoneNumber(memberData.phone_number || "");

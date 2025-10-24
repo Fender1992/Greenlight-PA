@@ -1,11 +1,12 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPatch, apiPost, ApiResponse } from "@web/lib/api";
 import type { OrgRow, PayerRow } from "@web/types/api";
 import AuditLogViewer from "./audit-viewer";
 import PendingMembersPage from "./pending-members/page";
+import { OrgSelector } from "@web/components/OrgSelector";
 
 type AdminTab = "payers" | "settings" | "users" | "pending" | "audit";
 
@@ -14,6 +15,21 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<AdminTab>("payers");
   const [searchQuery, setSearchQuery] = useState("");
   const [showPayerForm, setShowPayerForm] = useState(false);
+  const [selectedOrgId, setSelectedOrgId] = useState<string>("");
+
+  // Persist selectedOrgId to sessionStorage
+  useEffect(() => {
+    const storedOrgId = sessionStorage.getItem("admin_selected_org_id");
+    if (storedOrgId) {
+      setSelectedOrgId(storedOrgId);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedOrgId) {
+      sessionStorage.setItem("admin_selected_org_id", selectedOrgId);
+    }
+  }, [selectedOrgId]);
 
   const payersQuery = useQuery({
     queryKey: ["payers"],
@@ -27,14 +43,18 @@ export default function AdminPage() {
   });
 
   const orgQuery = useQuery({
-    queryKey: ["org"],
+    queryKey: ["org", selectedOrgId],
     queryFn: async () => {
-      const response = await apiGet<ApiResponse<OrgRow>>("/api/org");
+      if (!selectedOrgId) return null;
+      const response = await apiGet<ApiResponse<OrgRow>>(
+        `/api/org?org_id=${selectedOrgId}`
+      );
       if (!response.success) {
         throw new Error(response.error || "Failed to load organization");
       }
       return response.data as OrgRow;
     },
+    enabled: !!selectedOrgId,
   });
 
   const createPayerMutation = useMutation({
@@ -43,10 +63,13 @@ export default function AdminPage() {
       portal_url?: string;
       contact?: string;
     }) => {
-      const response = await apiPost<ApiResponse<PayerRow>>(
-        "/api/payers",
-        payload
-      );
+      if (!selectedOrgId) {
+        throw new Error("Please select an organization");
+      }
+      const response = await apiPost<ApiResponse<PayerRow>>("/api/payers", {
+        ...payload,
+        org_id: selectedOrgId,
+      });
       if (!response.success) {
         throw new Error(response.error || "Failed to create payer");
       }
@@ -60,14 +83,20 @@ export default function AdminPage() {
 
   const updateOrgMutation = useMutation({
     mutationFn: async (payload: Partial<OrgRow>) => {
-      const response = await apiPatch<ApiResponse<OrgRow>>("/api/org", payload);
+      if (!selectedOrgId) {
+        throw new Error("Please select an organization");
+      }
+      const response = await apiPatch<ApiResponse<OrgRow>>(
+        `/api/org?org_id=${selectedOrgId}`,
+        { ...payload, org_id: selectedOrgId }
+      );
       if (!response.success) {
         throw new Error(response.error || "Failed to update organization");
       }
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["org"] });
+      queryClient.invalidateQueries({ queryKey: ["org", selectedOrgId] });
     },
   });
 
@@ -120,6 +149,17 @@ export default function AdminPage() {
         <p className="mt-1 text-sm text-gray-500">
           Manage payers, organization settings, and audit history
         </p>
+      </div>
+
+      {/* Organization Selector */}
+      <div className="mb-6 bg-white rounded-lg shadow p-4">
+        <OrgSelector
+          value={selectedOrgId}
+          onChange={setSelectedOrgId}
+          label="Select Organization to Manage"
+          required={true}
+          filterByRole="admin"
+        />
       </div>
 
       <div className="bg-white rounded-lg shadow">
