@@ -68,6 +68,8 @@ export default function SuperAdminPage() {
   const [newOrgName, setNewOrgName] = useState("");
   const [newOrgDomain, setNewOrgDomain] = useState("");
   const [isVerifying, setIsVerifying] = useState(true);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   // Verify user is a super admin via API (bypasses RLS)
   useEffect(() => {
@@ -325,6 +327,14 @@ export default function SuperAdminPage() {
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.org_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Paginate filtered users
+  const paginatedUsers = filteredUsers.slice(
+    (page - 1) * pageSize,
+    page * pageSize
+  );
+
+  const totalPages = Math.ceil(filteredUsers.length / pageSize);
 
   // Show loading state while verifying access
   if (isVerifying) {
@@ -688,7 +698,7 @@ export default function SuperAdminPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredUsers.map((user) => (
+                      {paginatedUsers.map((user) => (
                         <tr key={user.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900">
@@ -756,6 +766,91 @@ export default function SuperAdminPage() {
                       ))}
                     </tbody>
                   </table>
+
+                  {/* Pagination Controls */}
+                  {filteredUsers.length > pageSize && (
+                    <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200">
+                      <div className="flex-1 flex justify-between sm:hidden">
+                        <button
+                          onClick={() => setPage((p) => Math.max(1, p - 1))}
+                          disabled={page === 1}
+                          className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Previous
+                        </button>
+                        <button
+                          onClick={() =>
+                            setPage((p) => Math.min(totalPages, p + 1))
+                          }
+                          disabled={page === totalPages}
+                          className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Next
+                        </button>
+                      </div>
+                      <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-sm text-gray-700">
+                            Showing{" "}
+                            <span className="font-medium">
+                              {(page - 1) * pageSize + 1}
+                            </span>{" "}
+                            to{" "}
+                            <span className="font-medium">
+                              {Math.min(page * pageSize, filteredUsers.length)}
+                            </span>{" "}
+                            of{" "}
+                            <span className="font-medium">
+                              {filteredUsers.length}
+                            </span>{" "}
+                            results
+                          </p>
+                        </div>
+                        <div>
+                          <nav
+                            className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+                            aria-label="Pagination"
+                          >
+                            <button
+                              onClick={() => setPage((p) => Math.max(1, p - 1))}
+                              disabled={page === 1}
+                              className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              ← Previous
+                            </button>
+                            {Array.from({
+                              length: Math.min(5, totalPages),
+                            }).map((_, i) => {
+                              const pageNum = i + 1;
+                              return (
+                                <button
+                                  key={pageNum}
+                                  onClick={() => setPage(pageNum)}
+                                  className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                                    page === pageNum
+                                      ? "z-10 bg-purple-50 border-purple-500 text-purple-600"
+                                      : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
+                                  }`}
+                                >
+                                  {pageNum}
+                                </button>
+                              );
+                            })}
+                            <button
+                              onClick={() =>
+                                setPage((p) => Math.min(totalPages, p + 1))
+                              }
+                              disabled={page === totalPages}
+                              className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              Next →
+                            </button>
+                          </nav>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {filteredUsers.length === 0 && (
                     <div className="text-center py-12 text-gray-500">
                       No users found
