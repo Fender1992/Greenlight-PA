@@ -21,7 +21,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const { orgId, client } = await getOrgContext(
       request,
-      searchParams.get("org_id")
+      searchParams.get("org_id"),
+      { allowAmbiguous: true } // Allow listing PAs for single-org users without explicit org_id
     );
     const status = searchParams.get("status") || undefined;
     const patientId = searchParams.get("patient_id") || undefined;

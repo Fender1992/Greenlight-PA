@@ -16,8 +16,9 @@ export async function GET(request: NextRequest) {
   try {
     const { user } = await requireUser(request);
 
-    // Try to resolve org ID - this will throw if user only has pending memberships
-    await resolveOrgId(user, null);
+    // Try to resolve org ID - allow ambiguous for multi-org users
+    // This endpoint just checks if user has ANY active membership
+    await resolveOrgId(user, null, { allowAmbiguous: true });
 
     // If we get here, user has active membership
     return NextResponse.json({
