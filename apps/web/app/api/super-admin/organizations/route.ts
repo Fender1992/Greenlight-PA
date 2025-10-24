@@ -107,6 +107,70 @@ export async function GET(request: NextRequest) {
 }
 
 /**
+ * POST /api/super-admin/organizations
+ *
+ * Create a new organization (super admin only)
+ * Body: { name: string, domain?: string }
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const { user } = await requireUser(request);
+
+    // Check if user is super admin
+    const superAdmin = await isSuperAdmin(user.id);
+    if (!superAdmin) {
+      throw new HttpError(403, "Super admin access required");
+    }
+
+    const body = await request.json();
+    const { name, domain } = body;
+
+    if (!name || typeof name !== "string" || name.trim().length === 0) {
+      throw new HttpError(400, "Organization name is required");
+    }
+
+    // Create the organization
+    const { data: newOrg, error: createError } = await supabaseAdmin
+      .from("org")
+      .insert({
+        name: name.trim(),
+        domain: domain?.trim() || null,
+      })
+      .select()
+      .single();
+
+    if (createError) {
+      throw new HttpError(500, createError.message);
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: newOrg,
+      message: "Organization created successfully",
+    });
+  } catch (error) {
+    if (error instanceof HttpError) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: error.status }
+      );
+    }
+
+    console.error("Super admin create organization error:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to create organization",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * DELETE /api/super-admin/organizations?org_id=xxx
  *
  * Delete an organization and all related data (super admin only)

@@ -544,6 +544,9 @@ export default function SuperAdminPage() {
                               <option value="admin">Admin</option>
                               <option value="staff">Staff</option>
                               <option value="referrer">Referrer</option>
+                              <option value="super_admin">
+                                👑 Super Admin
+                              </option>
                             </select>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">

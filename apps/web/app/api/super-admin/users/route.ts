@@ -40,14 +40,25 @@ export async function GET(request: NextRequest) {
       throw new HttpError(500, authError.message);
     }
 
-    // Merge member data with auth data
+    // Get all super admins
+    const { data: superAdmins } = await supabaseAdmin
+      .from("super_admin")
+      .select("user_id");
+
+    const superAdminUserIds = new Set(
+      (superAdmins || []).map((sa) => sa.user_id)
+    );
+
+    // Merge member data with auth data and super admin status
     const usersWithDetails = (members || []).map((member) => {
       const authUser = authUsers.users.find((u) => u.id === member.user_id);
+      const isSuperAdmin = superAdminUserIds.has(member.user_id);
+
       return {
         id: member.id,
         user_id: member.user_id,
         email: authUser?.email || "Unknown",
-        role: member.role,
+        role: isSuperAdmin ? "super_admin" : member.role,
         status: member.status,
         org_id: member.org_id,
         org_name:
@@ -106,10 +117,51 @@ export async function PATCH(request: NextRequest) {
 
     const updateData: { role?: string; status?: string } = {};
     if (role) {
-      if (!["admin", "staff", "referrer"].includes(role)) {
+      if (!["admin", "staff", "referrer", "super_admin"].includes(role)) {
         throw new HttpError(400, "Invalid role");
       }
-      updateData.role = role;
+
+      // Handle super_admin role specially
+      if (role === "super_admin") {
+        // Get the member to find the user_id
+        const { data: member } = await supabaseAdmin
+          .from("member")
+          .select("user_id")
+          .eq("id", memberId)
+          .single();
+
+        if (!member) {
+          throw new HttpError(404, "Member not found");
+        }
+
+        // Add to super_admin table
+        const { error: superAdminError } = await supabaseAdmin
+          .from("super_admin")
+          .insert({ user_id: member.user_id });
+
+        if (superAdminError && !superAdminError.message.includes("duplicate")) {
+          throw new HttpError(500, superAdminError.message);
+        }
+
+        // Set role to admin in member table (super_admin is tracked separately)
+        updateData.role = "admin";
+      } else {
+        // For non-super-admin roles, remove from super_admin table if present
+        const { data: member } = await supabaseAdmin
+          .from("member")
+          .select("user_id")
+          .eq("id", memberId)
+          .single();
+
+        if (member) {
+          await supabaseAdmin
+            .from("super_admin")
+            .delete()
+            .eq("user_id", member.user_id);
+        }
+
+        updateData.role = role;
+      }
     }
     if (status) {
       if (!["pending", "active", "rejected"].includes(status)) {
