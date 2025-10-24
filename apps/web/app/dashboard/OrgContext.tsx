@@ -51,30 +51,58 @@ export function OrgProvider({ children }: { children: ReactNode }) {
         }
 
         // Check if user is super admin
+        let isSuperAdminUser = false;
         try {
           const response = await fetch("/api/super-admin/stats");
           const data = await response.json();
-          setIsSuperAdmin(data.success === true);
+          isSuperAdminUser = data.success === true;
+          setIsSuperAdmin(isSuperAdminUser);
         } catch {
           setIsSuperAdmin(false);
         }
 
-        // Fetch user's active memberships
-        const { data: memberData, error } = await supabase
-          .from("member")
-          .select("org_id, role, org:org_id(id, name)")
-          .eq("user_id", session.user.id)
-          .eq("status", "active")
-          .order("created_at", { ascending: true });
+        // Fetch user's active memberships or all orgs for super admin
+        let typedMemberships: OrgContextValue["memberships"] = [];
 
-        if (error) {
-          console.error("Failed to load memberships:", error);
-          setLoading(false);
-          return;
+        if (isSuperAdminUser) {
+          // Super admin - fetch all organizations
+          const { data: allOrgs, error: orgsError } = await supabase
+            .from("org")
+            .select("id, name")
+            .order("name", { ascending: true });
+
+          if (orgsError) {
+            console.error(
+              "Failed to load organizations for super admin:",
+              orgsError
+            );
+          } else {
+            // Convert all orgs to membership format for super admin
+            typedMemberships = (allOrgs || []).map((org) => ({
+              org_id: org.id,
+              role: "super_admin",
+              org: { id: org.id, name: org.name },
+            }));
+          }
+        } else {
+          // Regular user - fetch their memberships
+          const { data: memberData, error } = await supabase
+            .from("member")
+            .select("org_id, role, org:org_id(id, name)")
+            .eq("user_id", session.user.id)
+            .eq("status", "active")
+            .order("created_at", { ascending: true });
+
+          if (error) {
+            console.error("Failed to load memberships:", error);
+            setLoading(false);
+            return;
+          }
+
+          typedMemberships = (memberData ||
+            []) as unknown as OrgContextValue["memberships"];
         }
 
-        const typedMemberships = (memberData ||
-          []) as unknown as OrgContextValue["memberships"];
         setMemberships(typedMemberships);
 
         // Try to restore selection from sessionStorage
