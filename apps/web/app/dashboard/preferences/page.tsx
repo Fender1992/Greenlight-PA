@@ -19,6 +19,20 @@ export default function PreferencesPage() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
+  // Profile fields
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [address, setAddress] = useState("");
+  const [email, setEmail] = useState("");
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  // Load profile data
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
   // Load theme from localStorage on mount
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
@@ -36,6 +50,43 @@ export default function PreferencesPage() {
     }
   }, []);
 
+  const loadProfile = async () => {
+    try {
+      setIsLoadingProfile(true);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.push("/");
+        return;
+      }
+
+      setEmail(user.email || "");
+
+      // Fetch member data
+      const { data: memberData, error } = await supabase
+        .from("member")
+        .select("first_name, last_name, phone_number, address")
+        .eq("user_id", user.id)
+        .single();
+
+      if (error) {
+        console.error("Error loading profile:", error);
+      } else if (memberData) {
+        setFirstName(memberData.first_name || "");
+        setLastName(memberData.last_name || "");
+        setPhoneNumber(memberData.phone_number || "");
+        setAddress(memberData.address || "");
+      }
+    } catch (error) {
+      console.error("Error loading profile:", error);
+      showToast("Failed to load profile data", "error");
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  };
+
   const applyTheme = (newTheme: "light" | "dark") => {
     if (newTheme === "dark") {
       document.documentElement.classList.add("dark");
@@ -49,6 +100,65 @@ export default function PreferencesPage() {
     localStorage.setItem("theme", newTheme);
     applyTheme(newTheme);
     showToast(`Theme changed to ${newTheme} mode`, "success");
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingProfile(true);
+
+    try {
+      const response = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phoneNumber, address }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || "Failed to update profile");
+      }
+
+      showToast("Profile updated successfully", "success");
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Failed to update profile",
+        "error"
+      );
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const handleRequestNameChange = async () => {
+    try {
+      const response = await fetch("/api/user/name-change-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || "Failed to submit name change request");
+      }
+
+      showToast(
+        "Name change request submitted. An admin will review your request.",
+        "success"
+      );
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Failed to submit name change request",
+        "error"
+      );
+    }
   };
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -169,6 +279,128 @@ export default function PreferencesPage() {
             </div>
           </div>
 
+          {/* Profile Information Section */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Profile Information
+            </h2>
+            {isLoadingProfile ? (
+              <div className="text-center py-4">
+                <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <p className="mt-2 text-sm text-gray-600">Loading profile...</p>
+              </div>
+            ) : (
+              <form onSubmit={handleSaveProfile} className="space-y-4">
+                {/* Name fields - Read only with request button */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label
+                      htmlFor="firstName"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      First Name
+                    </label>
+                    <input
+                      id="firstName"
+                      type="text"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500 cursor-not-allowed"
+                      readOnly
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="lastName"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Last Name
+                    </label>
+                    <input
+                      id="lastName"
+                      type="text"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500 cursor-not-allowed"
+                      readOnly
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500">
+                  To change your name, click the button below to request
+                  approval from an admin.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleRequestNameChange}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  Request Name Change
+                </button>
+
+                {/* Email - Read only */}
+                <div>
+                  <label
+                    htmlFor="email"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Email
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500 cursor-not-allowed"
+                  />
+                </div>
+
+                {/* Editable fields */}
+                <div>
+                  <label
+                    htmlFor="phoneNumber"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Phone Number
+                  </label>
+                  <input
+                    id="phoneNumber"
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="address"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Address
+                  </label>
+                  <input
+                    id="address"
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="submit"
+                    disabled={isSavingProfile}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                  >
+                    {isSavingProfile ? "Saving..." : "Save Changes"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+
           {/* Change Password Section */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
@@ -248,23 +480,6 @@ export default function PreferencesPage() {
                 </button>
               </div>
             </form>
-          </div>
-
-          {/* Account Information Section */}
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Account Information
-            </h2>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Email:</span>
-                <span className="font-medium text-gray-900">
-                  {supabase.auth
-                    .getUser()
-                    .then((user) => user.data.user?.email)}
-                </span>
-              </div>
-            </div>
           </div>
         </div>
       </div>

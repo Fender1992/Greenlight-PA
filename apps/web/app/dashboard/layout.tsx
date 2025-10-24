@@ -26,6 +26,18 @@ export default function DashboardLayout({
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<
+    Array<{
+      id: string;
+      title: string;
+      message: string;
+      link?: string;
+      read: boolean;
+      created_at: string;
+    }>
+  >([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const { shouldShowTour, loading: tourLoading, startTour } = useTour();
 
   useEffect(() => {
@@ -125,18 +137,46 @@ export default function DashboardLayout({
     }
   }, [loading, tourLoading, shouldShowTour, pathname, startTour]);
 
-  // Close profile menu when clicking outside
+  // Load notifications
+  useEffect(() => {
+    if (!user) return;
+
+    const loadNotifications = async () => {
+      try {
+        const response = await fetch("/api/notifications");
+        const data = await response.json();
+
+        if (data.success) {
+          setNotifications(data.data);
+          setUnreadCount(data.data.filter((n) => !n.read).length);
+        }
+      } catch (error) {
+        console.error("Failed to load notifications:", error);
+      }
+    };
+
+    loadNotifications();
+
+    // Poll for new notifications every 30 seconds
+    const interval = setInterval(loadNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  // Close menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (showProfileMenu && !target.closest(".relative")) {
+      if (showProfileMenu && !target.closest(".profile-menu")) {
         setShowProfileMenu(false);
+      }
+      if (showNotifications && !target.closest(".notifications-menu")) {
+        setShowNotifications(false);
       }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showProfileMenu]);
+  }, [showProfileMenu, showNotifications]);
 
   const handleLogout = async () => {
     try {
@@ -144,6 +184,57 @@ export default function DashboardLayout({
       router.push("/");
     } catch (error) {
       console.error("Logout error:", error);
+    }
+  };
+
+  const handleMarkAsRead = async (notificationId: string) => {
+    try {
+      await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notificationId }),
+      });
+
+      // Update local state
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markAllAsRead: true }),
+      });
+
+      // Update local state
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch (error) {
+      console.error("Failed to mark all notifications as read:", error);
+    }
+  };
+
+  const handleDeleteNotification = async (notificationId: string) => {
+    try {
+      await fetch(`/api/notifications?id=${notificationId}`, {
+        method: "DELETE",
+      });
+
+      // Update local state
+      setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+      const notification = notifications.find((n) => n.id === notificationId);
+      if (notification && !notification.read) {
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      }
+    } catch (error) {
+      console.error("Failed to delete notification:", error);
     }
   };
 
@@ -239,58 +330,176 @@ export default function DashboardLayout({
               {!loading && (
                 <>
                   {user && (
-                    <div className="relative">
-                      <button
-                        onClick={() => setShowProfileMenu(!showProfileMenu)}
-                        className="flex items-center text-sm text-gray-700 hover:text-gray-900"
-                      >
-                        <span>{displayName}</span>
-                        <svg
-                          className="ml-2 h-4 w-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
+                    <>
+                      {/* Notifications */}
+                      <div className="relative notifications-menu">
+                        <button
+                          onClick={() =>
+                            setShowNotifications(!showNotifications)
+                          }
+                          className="relative p-2 text-gray-600 hover:text-gray-900 focus:outline-none"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-                      </button>
-                      {showProfileMenu && (
-                        <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
-                          <div className="py-1">
-                            <Link
-                              href="/dashboard/preferences"
-                              onClick={() => setShowProfileMenu(false)}
-                              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            >
-                              Preferences
-                            </Link>
-                            <button
-                              onClick={() => {
-                                setShowProfileMenu(false);
-                                startTour();
-                              }}
-                              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            >
-                              Replay Product Tour
-                            </button>
-                            <button
-                              onClick={() => {
-                                setShowProfileMenu(false);
-                                handleLogout();
-                              }}
-                              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            >
-                              Logout
-                            </button>
+                          <svg
+                            className="h-6 w-6"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                            />
+                          </svg>
+                          {unreadCount > 0 && (
+                            <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
+                              {unreadCount}
+                            </span>
+                          )}
+                        </button>
+                        {showNotifications && (
+                          <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                            <div className="py-2">
+                              <div className="px-4 py-2 border-b border-gray-200 flex justify-between items-center">
+                                <h3 className="text-sm font-semibold text-gray-900">
+                                  Notifications
+                                </h3>
+                                {unreadCount > 0 && (
+                                  <button
+                                    onClick={handleMarkAllAsRead}
+                                    className="text-xs text-blue-600 hover:text-blue-700"
+                                  >
+                                    Mark all as read
+                                  </button>
+                                )}
+                              </div>
+                              {notifications.length === 0 ? (
+                                <div className="px-4 py-8 text-center text-sm text-gray-500">
+                                  No notifications
+                                </div>
+                              ) : (
+                                <div className="divide-y divide-gray-100">
+                                  {notifications.map((notification) => (
+                                    <div
+                                      key={notification.id}
+                                      className={`px-4 py-3 hover:bg-gray-50 ${
+                                        !notification.read ? "bg-blue-50" : ""
+                                      }`}
+                                    >
+                                      <div className="flex justify-between items-start">
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-medium text-gray-900">
+                                            {notification.title}
+                                          </p>
+                                          <p className="text-sm text-gray-600 mt-1">
+                                            {notification.message}
+                                          </p>
+                                          <div className="flex items-center gap-2 mt-2">
+                                            {notification.link && (
+                                              <Link
+                                                href={notification.link}
+                                                onClick={() => {
+                                                  setShowNotifications(false);
+                                                  if (!notification.read) {
+                                                    handleMarkAsRead(
+                                                      notification.id
+                                                    );
+                                                  }
+                                                }}
+                                                className="text-xs text-blue-600 hover:text-blue-700"
+                                              >
+                                                View
+                                              </Link>
+                                            )}
+                                            {!notification.read && (
+                                              <button
+                                                onClick={() =>
+                                                  handleMarkAsRead(
+                                                    notification.id
+                                                  )
+                                                }
+                                                className="text-xs text-gray-600 hover:text-gray-700"
+                                              >
+                                                Mark as read
+                                              </button>
+                                            )}
+                                            <button
+                                              onClick={() =>
+                                                handleDeleteNotification(
+                                                  notification.id
+                                                )
+                                              }
+                                              className="text-xs text-red-600 hover:text-red-700"
+                                            >
+                                              Delete
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </div>
+
+                      {/* Profile Menu */}
+                      <div className="relative profile-menu">
+                        <button
+                          onClick={() => setShowProfileMenu(!showProfileMenu)}
+                          className="flex items-center text-sm text-gray-700 hover:text-gray-900"
+                        >
+                          <span>{displayName}</span>
+                          <svg
+                            className="ml-2 h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 9l-7 7-7-7"
+                            />
+                          </svg>
+                        </button>
+                        {showProfileMenu && (
+                          <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                            <div className="py-1">
+                              <Link
+                                href="/dashboard/preferences"
+                                onClick={() => setShowProfileMenu(false)}
+                                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                              >
+                                Preferences
+                              </Link>
+                              <button
+                                onClick={() => {
+                                  setShowProfileMenu(false);
+                                  startTour();
+                                }}
+                                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                              >
+                                Replay Product Tour
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setShowProfileMenu(false);
+                                  handleLogout();
+                                }}
+                                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                              >
+                                Logout
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </>
                   )}
                   {!user && (
                     <Link
