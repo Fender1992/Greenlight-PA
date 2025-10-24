@@ -246,6 +246,13 @@ export default function DashboardLayout({
                       {showProfileMenu && (
                         <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
                           <div className="py-1">
+                            <Link
+                              href="/dashboard/preferences"
+                              onClick={() => setShowProfileMenu(false)}
+                              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                              Preferences
+                            </Link>
                             <button
                               onClick={() => {
                                 setShowProfileMenu(false);
