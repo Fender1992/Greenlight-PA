@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet, ApiResponse } from "@web/lib/api";
 import type { PaRequestWithRelations } from "@web/types/api";
+import { useOrg } from "./OrgContext";
 
 // Skeleton loader component
 function TableSkeleton({ rows = 5 }: { rows?: number }) {
@@ -62,21 +63,28 @@ function formatDate(value: string | null | undefined) {
 }
 
 export default function WorklistPage() {
+  const { selectedOrgId, memberships, loading: orgLoading } = useOrg();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["pa-requests"],
+    queryKey: ["pa-requests", selectedOrgId],
     queryFn: async () => {
-      const response =
-        await apiGet<ApiResponse<PaRequestWithRelations[]>>("/api/pa-requests");
+      // Build URL with org_id if available
+      const url = selectedOrgId
+        ? `/api/pa-requests?org_id=${selectedOrgId}`
+        : "/api/pa-requests";
+
+      const response = await apiGet<ApiResponse<PaRequestWithRelations[]>>(url);
       if (!response.success) {
         throw new Error(response.error || "Failed to load worklist");
       }
       return response.data ?? [];
     },
+    enabled:
+      !orgLoading && (memberships.length === 1 || selectedOrgId !== null),
   });
 
   const paRequests = data ?? [];
@@ -133,6 +141,36 @@ export default function WorklistPage() {
       {status.replace("_", " ")}
     </span>
   );
+
+  // Show org selection prompt for multi-org users without selection
+  if (!orgLoading && memberships.length > 1 && !selectedOrgId) {
+    return (
+      <div className="px-4 sm:px-0">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+          <svg
+            className="mx-auto h-12 w-12 text-blue-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+            />
+          </svg>
+          <h2 className="mt-4 text-xl font-semibold text-gray-900">
+            Select an Organization
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            You have access to {memberships.length} organizations. Please select
+            one from the dropdown in the navigation bar to view its PA requests.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 sm:px-0" data-tour="worklist">
