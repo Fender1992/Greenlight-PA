@@ -404,59 +404,94 @@ export default function DashboardLayout({
                                   {notifications.map((notification) => (
                                     <div
                                       key={notification.id}
-                                      className={`px-4 py-3 hover:bg-gray-50 ${
+                                      className={`relative ${
                                         !notification.read ? "bg-blue-50" : ""
                                       }`}
                                     >
-                                      <div className="flex justify-between items-start">
-                                        <div className="flex-1 min-w-0">
-                                          <p className="text-sm font-medium text-gray-900">
-                                            {notification.title}
-                                          </p>
-                                          <p className="text-sm text-gray-600 mt-1">
-                                            {notification.message}
-                                          </p>
-                                          <div className="flex items-center gap-2 mt-2">
-                                            {notification.link && (
-                                              <Link
-                                                href={notification.link}
-                                                onClick={() => {
-                                                  setShowNotifications(false);
-                                                  if (!notification.read) {
-                                                    handleMarkAsRead(
-                                                      notification.id
-                                                    );
-                                                  }
-                                                }}
-                                                className="text-xs text-blue-600 hover:text-blue-700"
-                                              >
-                                                View
-                                              </Link>
-                                            )}
+                                      {notification.link ? (
+                                        <Link
+                                          href={notification.link}
+                                          onClick={() => {
+                                            setShowNotifications(false);
+                                            if (!notification.read) {
+                                              handleMarkAsRead(notification.id);
+                                            }
+                                          }}
+                                          className="block px-4 py-3 hover:bg-gray-50 transition-colors"
+                                        >
+                                          <div className="flex justify-between items-start">
+                                            <div className="flex-1 min-w-0 pr-4">
+                                              <p className="text-sm font-medium text-gray-900">
+                                                {notification.title}
+                                              </p>
+                                              <p className="text-sm text-gray-600 mt-1">
+                                                {notification.message}
+                                              </p>
+                                              <p className="text-xs text-blue-600 mt-2">
+                                                Click to view →
+                                              </p>
+                                            </div>
                                             {!notification.read && (
-                                              <button
-                                                onClick={() =>
-                                                  handleMarkAsRead(
-                                                    notification.id
-                                                  )
-                                                }
-                                                className="text-xs text-gray-600 hover:text-gray-700"
-                                              >
-                                                Mark as read
-                                              </button>
+                                              <div className="flex-shrink-0">
+                                                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                                              </div>
                                             )}
-                                            <button
-                                              onClick={() =>
-                                                handleDeleteNotification(
-                                                  notification.id
-                                                )
-                                              }
-                                              className="text-xs text-red-600 hover:text-red-700"
-                                            >
-                                              Delete
-                                            </button>
+                                          </div>
+                                        </Link>
+                                      ) : (
+                                        <div className="px-4 py-3">
+                                          <div className="flex justify-between items-start">
+                                            <div className="flex-1 min-w-0 pr-4">
+                                              <p className="text-sm font-medium text-gray-900">
+                                                {notification.title}
+                                              </p>
+                                              <p className="text-sm text-gray-600 mt-1">
+                                                {notification.message}
+                                              </p>
+                                            </div>
+                                            {!notification.read && (
+                                              <div className="flex-shrink-0">
+                                                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                                              </div>
+                                            )}
                                           </div>
                                         </div>
+                                      )}
+                                      <div className="px-4 pb-3 flex items-center gap-3">
+                                        {!notification.read && (
+                                          <button
+                                            onClick={(e) => {
+                                              e.preventDefault();
+                                              e.stopPropagation();
+                                              handleMarkAsRead(notification.id);
+                                            }}
+                                            className="text-xs text-gray-600 hover:text-gray-900 transition-colors"
+                                          >
+                                            Mark as read
+                                          </button>
+                                        )}
+                                        <button
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            handleDeleteNotification(
+                                              notification.id
+                                            );
+                                          }}
+                                          className="text-xs text-red-600 hover:text-red-900 transition-colors"
+                                        >
+                                          Delete
+                                        </button>
+                                        <span className="text-xs text-gray-400 ml-auto">
+                                          {new Date(
+                                            notification.created_at
+                                          ).toLocaleDateString(undefined, {
+                                            month: "short",
+                                            day: "numeric",
+                                            hour: "numeric",
+                                            minute: "2-digit",
+                                          })}
+                                        </span>
                                       </div>
                                     </div>
                                   ))}
