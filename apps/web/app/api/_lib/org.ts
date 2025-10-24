@@ -7,6 +7,19 @@ import { supabaseAdmin, createScopedSupabase } from "@greenlight/db";
 import type { User } from "@supabase/supabase-js";
 
 /**
+ * Check if a user is a super admin (has access to all organizations)
+ */
+export async function isSuperAdmin(userId: string): Promise<boolean> {
+  const { data, error } = await supabaseAdmin
+    .from("super_admin")
+    .select("id")
+    .eq("user_id", userId)
+    .single();
+
+  return !error && !!data;
+}
+
+/**
  * Custom error wrapper that allows API routes to throw and
  * capture an HTTP status together with a message.
  */
@@ -62,8 +75,42 @@ export async function requireUser(
 /**
  * Resolves an organization id either from an explicit query parameter
  * or from the authenticated user's ACTIVE memberships.
+ * Super admins have access to all organizations.
  */
 export async function resolveOrgId(user: User, providedOrgId: string | null) {
+  // Check if user is a super admin
+  const superAdmin = await isSuperAdmin(user.id);
+
+  if (superAdmin) {
+    // Super admins can access any organization
+    if (providedOrgId) {
+      // Verify the org exists
+      const { data: org } = await supabaseAdmin
+        .from("org")
+        .select("id")
+        .eq("id", providedOrgId)
+        .single();
+
+      if (!org) {
+        throw new HttpError(404, "Organization not found");
+      }
+      return providedOrgId;
+    }
+
+    // If no org provided, return the first org (super admins need to specify org_id)
+    const { data: orgs } = await supabaseAdmin
+      .from("org")
+      .select("id")
+      .limit(1);
+
+    if (!orgs || orgs.length === 0) {
+      throw new HttpError(404, "No organizations found in system");
+    }
+
+    return orgs[0].id;
+  }
+
+  // Regular user - check active memberships
   const { data, error } = await supabaseAdmin
     .from("member")
     .select("org_id, status")
@@ -111,11 +158,18 @@ export async function resolveOrgId(user: User, providedOrgId: string | null) {
 
 /**
  * Resolves the user's role in the given organization (must be ACTIVE member).
+ * Super admins are returned as having 'super_admin' role.
  */
 export async function resolveOrgRole(
   user: User,
   orgId: string
-): Promise<"admin" | "staff" | "referrer"> {
+): Promise<"admin" | "staff" | "referrer" | "super_admin"> {
+  // Check if user is a super admin first
+  const superAdmin = await isSuperAdmin(user.id);
+  if (superAdmin) {
+    return "super_admin";
+  }
+
   const { data, error } = await supabaseAdmin
     .from("member")
     .select("role, status")
@@ -151,14 +205,14 @@ export async function getOrgContext(
 
 /**
  * Requires the authenticated user to have admin role in the organization.
- * Throws 403 if user is not an admin.
+ * Throws 403 if user is not an admin. Super admins are allowed.
  */
 export async function requireOrgAdmin(
   request: Request,
   providedOrgId: string | null
 ) {
   const context = await getOrgContext(request, providedOrgId);
-  if (context.role !== "admin") {
+  if (context.role !== "admin" && context.role !== "super_admin") {
     throw new HttpError(
       403,
       "This operation requires admin privileges in the organization"

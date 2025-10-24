@@ -75,6 +75,30 @@ export interface Database {
         };
         Relationships: [];
       };
+      super_admin: {
+        Row: {
+          id: string;
+          user_id: string;
+          granted_by: string | null;
+          granted_at: string;
+          notes: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          granted_by?: string | null;
+          granted_at?: string;
+          notes?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          granted_by?: string | null;
+          granted_at?: string;
+          notes?: string | null;
+        };
+        Relationships: [];
+      };
       patient: {
         Row: {
           id: string;
