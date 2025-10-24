@@ -82,15 +82,14 @@ export default function DashboardLayout({
           );
         }
 
-        // Check if user is super admin (will fail gracefully with RLS)
-        const { data: superAdminData, error: superAdminError } = await supabase
-          .from("super_admin")
-          .select("id")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-
-        // Only set if we got data without error, otherwise assume not super admin
-        setIsSuperAdmin(!superAdminError && !!superAdminData);
+        // Check if user is super admin via API (RLS blocks client queries)
+        try {
+          const response = await fetch("/api/super-admin/stats");
+          const data = await response.json();
+          setIsSuperAdmin(data.success === true);
+        } catch {
+          setIsSuperAdmin(false);
+        }
       }
 
       setLoading(false);
@@ -124,15 +123,14 @@ export default function DashboardLayout({
           setUserRole(null);
         }
 
-        // Check if user is super admin (will fail gracefully with RLS)
-        const { data: superAdminData, error: superAdminError } = await supabase
-          .from("super_admin")
-          .select("id")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-
-        // Only set if we got data without error, otherwise assume not super admin
-        setIsSuperAdmin(!superAdminError && !!superAdminData);
+        // Check if user is super admin via API (RLS blocks client queries)
+        try {
+          const response = await fetch("/api/super-admin/stats");
+          const data = await response.json();
+          setIsSuperAdmin(data.success === true);
+        } catch {
+          setIsSuperAdmin(false);
+        }
       } else {
         setUserRole(null);
         setIsSuperAdmin(false);
