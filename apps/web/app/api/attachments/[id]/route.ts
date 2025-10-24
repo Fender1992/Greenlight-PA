@@ -11,7 +11,7 @@ import { supabase, getCurrentUser } from "@greenlight/db";
  * Get attachment metadata and signed URL for download
  */
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -76,7 +76,7 @@ export async function GET(
  * Delete attachment (metadata + storage)
  */
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {

@@ -426,15 +426,162 @@ const paResult = await createPARequest({
 
 ---
 
+## Role-Based Access Control (RBAC)
+
+### Overview
+
+Greenlight PA implements a three-tier role-based access control system enforced at both the database (RLS) and application layers. All users are assigned a role when they join an organization through the `member` table.
+
+### Roles
+
+| Role       | Description                                         | Typical User                     |
+| ---------- | --------------------------------------------------- | -------------------------------- |
+| `admin`    | Full access to all organization data and settings   | Practice managers, clinic admins |
+| `staff`    | Read/write access to clinical data, no admin access | PA coordinators, case managers   |
+| `referrer` | Limited read access for external users              | Referring physicians (future)    |
+
+### Role Assignment
+
+1. **First User**: When a new organization is provisioned, the first user is automatically assigned the `admin` role
+2. **Subsequent Users**: New users default to `staff` role unless explicitly set during signup
+3. **Role Changes**: Only admins can modify roles for other users (via future admin UI)
+
+### Permission Matrix
+
+| Resource             | Admin | Staff | Referrer |
+| -------------------- | ----- | ----- | -------- |
+| **Payers**           |       |       |          |
+| - View               | ✓     | ✓     | ✓        |
+| - Create             | ✓     | ✗     | ✗        |
+| - Update             | ✓     | ✗     | ✗        |
+| - Delete             | ✓     | ✗     | ✗        |
+| **Patients**         |       |       |          |
+| - View               | ✓     | ✓     | Limited  |
+| - Create/Update      | ✓     | ✓     | ✗        |
+| - Delete             | ✓     | ✓     | ✗        |
+| **Orders & PAs**     |       |       |          |
+| - View               | ✓     | ✓     | Own only |
+| - Create/Update      | ✓     | ✓     | ✗        |
+| - Delete             | ✓     | ✓     | ✗        |
+| - Submit PA          | ✓     | ✓     | ✗        |
+| **Org Settings**     |       |       |          |
+| - View               | ✓     | ✓     | ✗        |
+| - Update             | ✓     | ✗     | ✗        |
+| **Metrics/Reports**  |       |       |          |
+| - View               | ✓     | ✓     | ✗        |
+| **Audit Logs**       |       |       |          |
+| - View               | ✓     | ✓     | ✗        |
+| **Policy Ingestion** |       |       |          |
+| - Trigger            | ✓     | ✗     | ✗        |
+
+### API-Level Enforcement
+
+The application enforces RBAC through middleware functions in `apps/web/app/api/_lib/org.ts`:
+
+1. **`requireUser(request)`** - Authenticates user, throws 401 if not logged in
+2. **`getOrgContext(request, orgId)`** - Resolves user's organization and role
+3. **`requireOrgAdmin(request, orgId)`** - Ensures user has admin role, throws 403 otherwise
+
+**Example Usage:**
+
+```typescript
+// Admin-only endpoint
+export async function POST(request: NextRequest) {
+  const { orgId } = await requireOrgAdmin(request, null);
+  // Only admins reach this point
+}
+
+// Staff-accessible endpoint
+export async function GET(request: NextRequest) {
+  const { orgId, role } = await getOrgContext(request, null);
+  // All roles reach this point, can branch on role if needed
+}
+```
+
+### Database-Level Enforcement
+
+Row Level Security policies use helper functions to enforce org membership:
+
+```sql
+-- Helper: get_user_org_ids
+CREATE FUNCTION get_user_org_ids(user_uuid UUID)
+RETURNS UUID[] AS $$
+  SELECT ARRAY_AGG(org_id)
+  FROM member
+  WHERE user_id = user_uuid;
+$$ LANGUAGE SQL SECURITY DEFINER;
+
+-- Helper: is_org_admin
+CREATE FUNCTION is_org_admin(user_uuid UUID, org_uuid UUID)
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM member
+    WHERE user_id = user_uuid
+      AND org_id = org_uuid
+      AND role = 'admin'
+  );
+$$ LANGUAGE SQL SECURITY DEFINER;
+```
+
+**RLS Policy Examples:**
+
+```sql
+-- Payers: All authenticated users can view
+CREATE POLICY "payer_select_policy" ON payer
+  FOR SELECT
+  USING (auth.uid() IS NOT NULL);
+
+-- Payers: Only admins can insert/update/delete
+CREATE POLICY "payer_modify_policy" ON payer
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM member
+      WHERE member.user_id = auth.uid()
+        AND member.role = 'admin'
+    )
+  );
+
+-- Patients: Scoped to user's organizations
+CREATE POLICY "patient_policy" ON patient
+  FOR ALL
+  USING (org_id = ANY(get_user_org_ids(auth.uid())));
+```
+
+### UI-Level Enforcement
+
+The dashboard navigation conditionally shows admin-only features:
+
+- **Admin Tab**: Hidden for non-admin users (see `apps/web/app/dashboard/layout.tsx`)
+- **Future**: Admin-only buttons/forms will be disabled or hidden based on user role
+
+### Provisioning Flow
+
+When a user signs up and creates an organization:
+
+1. User authenticates via Supabase Auth (`auth.users`)
+2. `POST /api/auth/provision` creates:
+   - New `org` record
+   - New `member` record with role:
+     - `admin` if first user in new org
+     - `staff` (or requested role) if org exists
+3. Subsequent logins resolve role from `member` table
+
+**Security Consideration**: The provisioning endpoint must validate that only existing admins can create new admin users for an existing organization. Self-signup should always default to `staff`.
+
+---
+
 ## Security Notes
 
 1. **Never bypass RLS in client code** - Always use the standard `supabase` client
 2. **Service role key** - Only use `supabaseAdmin` for:
    - Background jobs
-   - Admin operations
+   - Admin operations that require bypassing RLS
    - Audit log writes
+   - Creating/deleting payers (admin-only feature)
 3. **PHI Handling** - In production, enable column-level encryption for sensitive fields
 4. **BAA Required** - Ensure Business Associate Agreement with Supabase before processing real PHI
+5. **Role Validation** - Always use `requireOrgAdmin()` for admin-only API endpoints
 
 ---
 

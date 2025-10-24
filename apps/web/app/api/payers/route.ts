@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@greenlight/db";
 import type { Database } from "@greenlight/db/types/database";
-import { HttpError, requireUser } from "../_lib/org";
+import { HttpError, requireUser, requireOrgAdmin } from "../_lib/org";
 
 type PayerInsert = Database["public"]["Tables"]["payer"]["Insert"];
 type PayerUpdate = Database["public"]["Tables"]["payer"]["Update"];
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireUser(request);
+    await requireOrgAdmin(request, null);
     const body = await request.json();
 
     if (!body.name) {
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    await requireUser(request);
+    await requireOrgAdmin(request, null);
     const body = await request.json();
     const id = body.id as string | undefined;
     if (!id) {
@@ -146,7 +146,7 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const { user } = await requireUser(request);
+    const { user } = await requireOrgAdmin(request, null);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 

@@ -1,6 +1,6 @@
 # Greenlight PA - Build Status
 
-**Last Updated:** 2025-10-24 (API documentation audit complete, runbooks created)
+**Last Updated:** 2025-10-24 (RBAC hardening, dead code cleanup, signup role assignment)
 
 ---
 
@@ -236,6 +236,90 @@
 ---
 
 ## Recent Changes
+
+### 2025-10-24 - RBAC Hardening, Dead Code Cleanup & Signup Role Assignment
+
+- ✅ **Dead Code Cleanup**
+  - Fixed unused `request` parameter in attachments/[id]/route.ts (both GET and DELETE handlers)
+  - Fixed unused `demoBanner` variable in e2e/home.spec.ts (added assertion)
+  - Removed unused `expect` import in vitest.setup.ts
+  - Verified with `tsc --noEmit --noUnusedLocals --noUnusedParameters` (zero warnings)
+
+- ✅ **RBAC Implementation - API Layer**
+  - Extended `getOrgContext()` to return user's role from `member` table
+  - Created `resolveOrgRole()` helper function in `apps/web/app/api/_lib/org.ts`
+  - Implemented `requireOrgAdmin()` guard that throws 403 for non-admin users
+  - Applied admin guards to protected endpoints:
+    - `POST/PATCH/DELETE /api/payers` - payer management (admin-only)
+    - `PATCH /api/org` - organization settings (admin-only)
+    - `POST /api/policy/ingest` - policy ingestion (admin-only)
+  - All admin-only endpoints now return 403 for staff/referrer roles
+
+- ✅ **RBAC Implementation - UI Layer**
+  - Updated dashboard layout (`apps/web/app/dashboard/layout.tsx`) to fetch user role
+  - Admin tab now conditionally hidden for non-admin users
+  - Role fetched from `member` table on session load and auth state changes
+  - Supports three roles: `admin`, `staff`, `referrer`
+
+- ✅ **RBAC Implementation - Provisioning & Signup**
+  - Updated `/api/auth/provision` to accept optional `role` and `orgId` parameters
+  - Implemented role assignment logic:
+    - First user in new org → always `admin` (regardless of requested role)
+    - Joining existing org → defaults to `staff` (prevents self-escalation to admin)
+    - Supports `referrer` role assignment for limited-access users
+    - Prevents re-provisioning of existing users
+  - Added validation for requested roles (admin, staff, referrer)
+  - Updated signup page with informational banner about admin role assignment
+
+- ✅ **RBAC Documentation**
+  - Added comprehensive RBAC section to `docs/database-schema.md` (150+ lines)
+  - Documented three-tier role system (admin, staff, referrer)
+  - Created permission matrix showing role capabilities across all resources
+  - Documented API-level enforcement (`requireUser`, `getOrgContext`, `requireOrgAdmin`)
+  - Documented database-level enforcement (RLS policies with `is_org_admin` helper)
+  - Documented UI-level enforcement (conditional navigation)
+  - Documented provisioning flow and security considerations
+  - Added code examples for RLS policies and API middleware usage
+
+- ✅ **API Documentation Refresh (from previous session)**
+  - Inventoried all 26 API route files
+  - Documented 18 previously undocumented endpoints in `docs/api-routes.md`
+  - Created comprehensive `docs/runbooks/environment-setup.md` (503 lines)
+  - Documented environment variables, feature flags, troubleshooting guides
+
+- ✅ **Testing & Verification**
+  - ✅ `npm run lint` - No ESLint errors
+  - ✅ `npm run typecheck` - All TypeScript checks pass
+  - ✅ `npm run test` - Test suite executing (unit tests present for tour-status, validation)
+  - ✅ Dead code verification with strict tsc flags
+
+**Files Modified:**
+
+- `apps/web/app/api/_lib/org.ts` - Added role resolution and admin guard
+- `apps/web/app/api/payers/route.ts` - Applied admin guards to POST/PATCH/DELETE
+- `apps/web/app/api/org/route.ts` - Applied admin guard to PATCH
+- `apps/web/app/api/policy/ingest/route.ts` - Applied admin guard to POST
+- `apps/web/app/api/auth/provision/route.ts` - Added role assignment logic
+- `apps/web/app/dashboard/layout.tsx` - Added role fetching and conditional Admin tab
+- `apps/web/app/signup/page.tsx` - Added admin role information banner
+- `apps/web/app/api/attachments/[id]/route.ts` - Fixed unused parameters
+- `apps/web/e2e/home.spec.ts` - Fixed unused variable
+- `apps/web/vitest.setup.ts` - Removed unused import
+- `docs/database-schema.md` - Added comprehensive RBAC documentation
+
+**Security Improvements:**
+
+- Admin-only endpoints now properly protected at API layer
+- UI prevents unauthorized access attempts (graceful degradation)
+- Role-based access enforced at three layers: Database (RLS), API (middleware), UI (conditional rendering)
+- Provisioning prevents role escalation without proper authorization
+- First user in new organization always becomes admin (secure default)
+
+**Outstanding Work:**
+
+- Future: Implement admin UI for managing user roles
+- Future: Add email invitation system with role pre-assignment
+- Future: Extend RLS policies to enforce referrer-only access patterns
 
 ### 2025-10-20 - Complete Database Population with All Tables
 

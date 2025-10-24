@@ -20,22 +20,54 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<
+    "admin" | "staff" | "referrer" | null
+  >(null);
   const [loading, setLoading] = useState(true);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const { shouldShowTour, loading: tourLoading, startTour } = useTour();
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Get initial session and user role
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setUser(session?.user ?? null);
+
+      // Fetch user's role from member table
+      if (session?.user) {
+        const { data: memberData } = await supabase
+          .from("member")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .single();
+
+        if (memberData) {
+          setUserRole(memberData.role as "admin" | "staff" | "referrer");
+        }
+      }
+
       setLoading(false);
     });
 
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
+
+      // Fetch role when session changes
+      if (session?.user) {
+        const { data: memberData } = await supabase
+          .from("member")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .single();
+
+        if (memberData) {
+          setUserRole(memberData.role as "admin" | "staff" | "referrer");
+        }
+      } else {
+        setUserRole(null);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -141,16 +173,18 @@ export default function DashboardLayout({
                 >
                   Metrics
                 </Link>
-                <Link
-                  href="/dashboard/admin"
-                  className={
-                    pathname === "/dashboard/admin"
-                      ? "border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                  }
-                >
-                  Admin
-                </Link>
+                {userRole === "admin" && (
+                  <Link
+                    href="/dashboard/admin"
+                    className={
+                      pathname === "/dashboard/admin"
+                        ? "border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                    }
+                  >
+                    Admin
+                  </Link>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-4">

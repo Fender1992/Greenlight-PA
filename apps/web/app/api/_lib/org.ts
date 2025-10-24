@@ -93,6 +93,27 @@ export async function resolveOrgId(user: User, providedOrgId: string | null) {
   return memberships[0];
 }
 
+/**
+ * Resolves the user's role in the given organization.
+ */
+export async function resolveOrgRole(
+  user: User,
+  orgId: string
+): Promise<"admin" | "staff" | "referrer"> {
+  const { data, error } = await supabaseAdmin
+    .from("member")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("org_id", orgId)
+    .single();
+
+  if (error || !data) {
+    throw new HttpError(403, "User does not have access to this organization");
+  }
+
+  return data.role as "admin" | "staff" | "referrer";
+}
+
 export function getScopedClient(token: string) {
   return createScopedSupabase(token);
 }
@@ -103,6 +124,25 @@ export async function getOrgContext(
 ) {
   const { user, token } = await requireUser(request);
   const orgId = await resolveOrgId(user, providedOrgId);
+  const role = await resolveOrgRole(user, orgId);
   const client = getScopedClient(token);
-  return { user, token, orgId, client };
+  return { user, token, orgId, role, client };
+}
+
+/**
+ * Requires the authenticated user to have admin role in the organization.
+ * Throws 403 if user is not an admin.
+ */
+export async function requireOrgAdmin(
+  request: Request,
+  providedOrgId: string | null
+) {
+  const context = await getOrgContext(request, providedOrgId);
+  if (context.role !== "admin") {
+    throw new HttpError(
+      403,
+      "This operation requires admin privileges in the organization"
+    );
+  }
+  return context;
 }

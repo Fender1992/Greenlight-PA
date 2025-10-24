@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import { ingestPoliciesForPayer } from "@greenlight/policy";
 import type { ScraperConfig } from "@greenlight/policy";
+import { HttpError, requireOrgAdmin } from "../../_lib/org";
 
 /**
  * POST /api/policy/ingest
@@ -29,6 +30,9 @@ import type { ScraperConfig } from "@greenlight/policy";
  */
 export async function POST(request: Request) {
   try {
+    // Admin check
+    await requireOrgAdmin(request, null);
+
     // Feature flag check
     if (process.env.ENABLE_POLICY_INGESTION !== "true") {
       return NextResponse.json(
@@ -96,6 +100,13 @@ export async function POST(request: Request) {
       errors: result.errors,
     });
   } catch (error) {
+    if (error instanceof HttpError) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: error.status }
+      );
+    }
+
     console.error("[API] Policy ingestion error:", error);
     return NextResponse.json(
       {
