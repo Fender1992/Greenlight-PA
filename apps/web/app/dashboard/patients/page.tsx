@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { apiGet, ApiResponse } from "@web/lib/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiGet, apiPost, ApiResponse } from "@web/lib/api";
 import type { PatientRow } from "@web/types/api";
 
 // Skeleton loader component
@@ -43,7 +43,18 @@ function formatDate(value: string | null) {
 export default function PatientsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    mrn: "",
+    dob: "",
+    sex: "",
+    phone: "",
+    address: "",
+  });
+  const [formError, setFormError] = useState<string | null>(null);
   const pageSize = 10;
+  const queryClient = useQueryClient();
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["patients"],
@@ -57,6 +68,37 @@ export default function PatientsPage() {
   });
 
   const patients = data ?? [];
+
+  const createPatientMutation = useMutation({
+    mutationFn: async (patient: typeof formData) => {
+      const response = await apiPost<ApiResponse<PatientRow>>(
+        "/api/patients",
+        patient
+      );
+      if (!response.success) {
+        throw new Error(response.error || "Failed to create patient");
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      setShowAddModal(false);
+      setFormData({
+        name: "",
+        mrn: "",
+        dob: "",
+        sex: "",
+        phone: "",
+        address: "",
+      });
+      setFormError(null);
+    },
+    onError: (error) => {
+      setFormError(
+        error instanceof Error ? error.message : "Failed to create patient"
+      );
+    },
+  });
 
   const filteredPatients = useMemo(() => {
     const query = searchQuery.toLowerCase();
@@ -94,7 +136,10 @@ export default function PatientsPage() {
           </p>
         </div>
         <div className="mt-4 sm:mt-0">
-          <button className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+          >
             + Add Patient
           </button>
         </div>
@@ -299,6 +344,162 @@ export default function PatientsPage() {
           </div>
         </div>
       </div>
+
+      {/* Add Patient Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">
+                Add New Patient
+              </h2>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setFormError(null);
+                createPatientMutation.mutate(formData);
+              }}
+              className="px-6 py-4 space-y-4"
+            >
+              {formError && (
+                <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800">
+                  {formError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Full Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="John Doe"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    MRN
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.mrn}
+                    onChange={(e) =>
+                      setFormData({ ...formData, mrn: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="MRN123456"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Date of Birth
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.dob}
+                    onChange={(e) =>
+                      setFormData({ ...formData, dob: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Sex
+                  </label>
+                  <select
+                    value={formData.sex}
+                    onChange={(e) =>
+                      setFormData({ ...formData, sex: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select...</option>
+                    <option value="M">Male</option>
+                    <option value="F">Female</option>
+                    <option value="X">Other/Undisclosed</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phone: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="555-0123"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Address
+                </label>
+                <textarea
+                  value={formData.address}
+                  onChange={(e) =>
+                    setFormData({ ...formData, address: e.target.value })
+                  }
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="123 Main St, City, State ZIP"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setFormData({
+                      name: "",
+                      mrn: "",
+                      dob: "",
+                      sex: "",
+                      phone: "",
+                      address: "",
+                    });
+                    setFormError(null);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                  disabled={createPatientMutation.isPending}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={createPatientMutation.isPending}
+                  className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {createPatientMutation.isPending
+                    ? "Creating..."
+                    : "Create Patient"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

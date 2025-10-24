@@ -1,6 +1,6 @@
 # Greenlight PA - Build Status
 
-**Last Updated:** 2025-10-20 (Seed data fixed and database fully populated)
+**Last Updated:** 2025-10-24 (API documentation audit complete, runbooks created)
 
 ---
 
@@ -691,6 +691,109 @@
 - Section 7: Security and audit
 - Section 8: Metrics and nudges
 - Section 9: Final packaging
+
+---
+
+## Recent Updates
+
+### 2025-10-24: API Documentation Audit & Runbook Creation
+
+**Objective:** Synchronize API documentation with actual production endpoints and create operational runbooks.
+
+**Completed Tasks:**
+
+1. ✅ Inventoried all 26 API routes in `apps/web/app/api/**/route.ts`
+2. ✅ Expanded `docs/api-routes.md` from 549 to 1,420+ lines
+3. ✅ Documented 18 previously undocumented endpoints:
+   - Core resources: Providers, Patients, Payers (CRUD operations)
+   - Organization management (profile GET/PATCH)
+   - Metrics & Analytics (dashboard aggregates with time ranges)
+   - Audit Log (paginated, filterable by user/action/subject/date)
+   - Member Tour Status (onboarding tracking, 5 HTTP methods)
+   - LLM Features (checklist + medical necessity generation)
+   - PDF Generation (cover letter + approval summary)
+   - Policy Management (document ingestion)
+   - Authentication Helpers (5 auth flow endpoints)
+4. ✅ Created `docs/runbooks/environment-setup.md` (comprehensive operational guide)
+5. ✅ Documented all environment variables and feature flags
+6. ✅ Updated testing section with coverage gaps
+
+**Documentation Improvements:**
+
+- Added environment variable reference table (required, optional, feature flags)
+- Documented validation helpers (`validateProviderCreate`, `validatePatientCreate`, etc.)
+- Added pagination, filtering, and search patterns
+- Included error responses for each endpoint
+- Documented LLM feature prerequisites (`ENABLE_LLM=true`, `CACHEGPT_API_KEY`)
+- Documented background job setup (`CRON_SECRET` for OCR batch processing)
+- Added operational requirements for each feature
+
+**Runbook Coverage:**
+
+- Environment variable setup (dev/staging/production)
+- Feature flag configuration (LLM, OCR, Policy Ingestion)
+- Background job configuration (cron secrets, scheduling)
+- Vercel deployment checklist
+- Troubleshooting guides (common errors + solutions)
+- Security best practices
+- Cost monitoring (CacheGPT, Supabase, Vercel)
+- Maintenance schedules (weekly/monthly/quarterly)
+
+**Test Results:**
+
+- Existing tests: `tour-status.test.ts`, `validation.test.ts`
+- Test coverage gaps identified for 11 endpoint groups
+- All existing tests passing (vitest)
+
+**Files Modified:**
+
+- `docs/api-routes.md` - Expanded from 549 to 1,420+ lines
+- `docs/runbooks/environment-setup.md` - Created (new file, 500+ lines)
+- `STATUS.md` - Updated with audit summary
+
+**Follow-Up Actions Needed:**
+
+1. Add test coverage for documented endpoints:
+   - `providers.test.ts`, `patients.test.ts`, `payers.test.ts`
+   - `metrics.test.ts`, `audit.test.ts`
+   - `llm.test.ts` (with mocked CacheGPT responses)
+   - `pdf.test.ts`, `auth.test.ts`
+2. Review and validate environment variables in Vercel dashboard
+3. Verify cron job execution logs for OCR batch processing
+4. Set up monitoring for LLM API usage (CacheGPT dashboard)
+
+**Environment Variables Audit:**
+
+- **Required (Core):** 6 Supabase variables (all present ✓)
+- **Feature Flags:** `ENABLE_LLM`, `CACHEGPT_API_KEY` (configured ✓)
+- **Background Jobs:** `CRON_SECRET` (configured ✓)
+- **Optional:** Demo mode, Sentry, PostHog (optional features)
+
+**API Endpoint Count:**
+
+- Previously documented: 8 endpoint groups
+- Now documented: 26 endpoint groups (complete coverage)
+- HTTP methods documented: 47 total across all routes
+
+---
+
+### 2025-10-23: CacheGPT Integration
+
+**Completed Tasks:**
+
+- Replaced Anthropic SDK with direct CacheGPT API calls
+- Updated LLM client to use native `fetch()` instead of SDK
+- All LLM requests now route to `https://cachegpt.app/api/v1/messages`
+- Removed `@anthropic-ai/sdk` dependency from package.json
+- Updated documentation to reflect CacheGPT-first approach
+- Deployed to production with working LLM features
+
+**Files Modified:**
+
+- `packages/llm/client.ts` - Replaced SDK with native fetch
+- `packages/llm/package.json` - Removed @anthropic-ai/sdk
+- `packages/llm/README.md` - Updated docs for CacheGPT
+- `packages/llm/prompts/*.ts` - Updated imports
 
 ---
 
