@@ -19,7 +19,11 @@ import { HttpError, getOrgContext } from "../_lib/org";
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const { orgId } = await getOrgContext(request, searchParams.get("org_id"));
+    const { orgId } = await getOrgContext(
+      request,
+      searchParams.get("org_id"),
+      { allowAmbiguous: true } // Allow for single-org users
+    );
     const timeRange = searchParams.get("time_range") || "30d";
 
     // Calculate date range

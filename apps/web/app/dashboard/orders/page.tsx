@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet, ApiResponse } from "@web/lib/api";
 import type { OrderWithRelations } from "@web/types/api";
+import { useOrg } from "../OrgContext";
 
 // Skeleton loader component
 function TableSkeleton({ rows = 5 }: { rows?: number }) {
@@ -43,20 +44,26 @@ function formatDate(value: string | null | undefined) {
 }
 
 export default function OrdersPage() {
+  const { selectedOrgId, memberships, loading: orgLoading } = useOrg();
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["orders"],
+    queryKey: ["orders", selectedOrgId],
     queryFn: async () => {
-      const response =
-        await apiGet<ApiResponse<OrderWithRelations[]>>("/api/orders");
+      const url = selectedOrgId
+        ? `/api/orders?org_id=${selectedOrgId}`
+        : "/api/orders";
+
+      const response = await apiGet<ApiResponse<OrderWithRelations[]>>(url);
       if (!response.success) {
         throw new Error(response.error || "Failed to load orders");
       }
       return response.data ?? [];
     },
+    enabled:
+      !orgLoading && (memberships.length === 1 || selectedOrgId !== null),
   });
 
   const orders = data ?? [];
@@ -127,6 +134,37 @@ export default function OrdersPage() {
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
         />
       </div>
+
+      {/* Show org selection message for multi-org users */}
+      {!orgLoading && memberships.length > 1 && !selectedOrgId && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+          <div className="flex items-start">
+            <svg
+              className="h-6 w-6 text-blue-600 mr-3 flex-shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <div>
+              <h3 className="text-sm font-medium text-blue-900">
+                Select an Organization
+              </h3>
+              <p className="mt-1 text-sm text-blue-700">
+                You have access to multiple organizations. Please select one
+                using the organization selector in the top navigation to view
+                orders.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow overflow-hidden">
         {isError ? (

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet, ApiResponse } from "@web/lib/api";
 import type { MetricsResponse, PayerRow } from "@web/types/api";
+import { useOrg } from "../OrgContext";
 
 const TIME_RANGE_OPTIONS = [
   { value: "7d", label: "Last 7 days" },
@@ -13,19 +14,24 @@ const TIME_RANGE_OPTIONS = [
 ];
 
 export default function MetricsPage() {
+  const { selectedOrgId, memberships, loading: orgLoading } = useOrg();
   const [timeRange, setTimeRange] = useState("30d");
 
   const metricsQuery = useQuery({
-    queryKey: ["metrics", timeRange],
+    queryKey: ["metrics", selectedOrgId, timeRange],
     queryFn: async () => {
-      const response = await apiGet<ApiResponse<MetricsResponse>>(
-        `/api/metrics?time_range=${timeRange}`
-      );
+      const url = selectedOrgId
+        ? `/api/metrics?org_id=${selectedOrgId}&time_range=${timeRange}`
+        : `/api/metrics?time_range=${timeRange}`;
+
+      const response = await apiGet<ApiResponse<MetricsResponse>>(url);
       if (!response.success) {
         throw new Error(response.error || "Failed to load metrics");
       }
       return response.data;
     },
+    enabled:
+      !orgLoading && (memberships.length === 1 || selectedOrgId !== null),
   });
 
   const payersQuery = useQuery({
@@ -87,6 +93,37 @@ export default function MetricsPage() {
           </select>
         </div>
       </div>
+
+      {/* Show org selection message for multi-org users */}
+      {!orgLoading && memberships.length > 1 && !selectedOrgId && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+          <div className="flex items-start">
+            <svg
+              className="h-6 w-6 text-blue-600 mr-3 flex-shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <div>
+              <h3 className="text-sm font-medium text-blue-900">
+                Select an Organization
+              </h3>
+              <p className="mt-1 text-sm text-blue-700">
+                You have access to multiple organizations. Please select one
+                using the organization selector in the top navigation to view
+                metrics.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {metricsQuery.isLoading ? (
         <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">

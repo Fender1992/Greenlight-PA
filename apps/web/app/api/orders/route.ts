@@ -19,7 +19,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const { orgId, client } = await getOrgContext(
       request,
-      searchParams.get("org_id")
+      searchParams.get("org_id"),
+      { allowAmbiguous: true } // Allow for single-org users
     );
     const limit = Math.min(
       Math.max(Number.parseInt(searchParams.get("limit") ?? "", 10) || 50, 1),
