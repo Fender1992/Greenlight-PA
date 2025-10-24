@@ -18,20 +18,48 @@ export default function OrderCreatePage() {
 
   const patientsQuery = useQuery({
     queryKey: ["patients"],
-    queryFn: () => apiGet<ApiResponse<PatientRow[]>>("/api/patients"),
-    select: (response) => response.data ?? [],
+    queryFn: async () => {
+      console.log("[Order Form] Fetching patients...");
+      const response = await apiGet<ApiResponse<PatientRow[]>>("/api/patients");
+      console.log("[Order Form] Patients response:", response);
+      return response;
+    },
+    select: (response) => {
+      const patients = response.data ?? [];
+      console.log("[Order Form] Selected patients:", patients);
+      return patients;
+    },
   });
 
   const providersQuery = useQuery({
     queryKey: ["providers"],
-    queryFn: () => apiGet<ApiResponse<ProviderRow[]>>("/api/providers"),
-    select: (response) => response.data ?? [],
+    queryFn: async () => {
+      console.log("[Order Form] Fetching providers...");
+      const response =
+        await apiGet<ApiResponse<ProviderRow[]>>("/api/providers");
+      console.log("[Order Form] Providers response:", response);
+      return response;
+    },
+    select: (response) => {
+      const providers = response.data ?? [];
+      console.log("[Order Form] Selected providers:", providers);
+      return providers;
+    },
   });
 
   const payersQuery = useQuery({
     queryKey: ["payers"],
-    queryFn: () => apiGet<ApiResponse<PayerRow[]>>("/api/payers"),
-    select: (response) => response.data ?? [],
+    queryFn: async () => {
+      console.log("[Order Form] Fetching payers...");
+      const response = await apiGet<ApiResponse<PayerRow[]>>("/api/payers");
+      console.log("[Order Form] Payers response:", response);
+      return response;
+    },
+    select: (response) => {
+      const payers = response.data ?? [];
+      console.log("[Order Form] Selected payers:", payers);
+      return payers;
+    },
   });
 
   const [modality, setModality] = useState("");
@@ -99,6 +127,19 @@ export default function OrderCreatePage() {
     patientsQuery.isLoading ||
     providersQuery.isLoading ||
     payersQuery.isLoading;
+
+  // Debug logging
+  console.log("[Order Form] Query states:", {
+    patientsLoading: patientsQuery.isLoading,
+    patientsError: patientsQuery.isError,
+    patientsCount: patientsQuery.data?.length ?? 0,
+    providersLoading: providersQuery.isLoading,
+    providersError: providersQuery.isError,
+    providersCount: providersQuery.data?.length ?? 0,
+    payersLoading: payersQuery.isLoading,
+    payersError: payersQuery.isError,
+    payersCount: payersQuery.data?.length ?? 0,
+  });
 
   return (
     <div className="px-4 sm:px-0">
