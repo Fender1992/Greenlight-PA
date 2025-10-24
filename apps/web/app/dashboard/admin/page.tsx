@@ -5,8 +5,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPatch, apiPost, ApiResponse } from "@web/lib/api";
 import type { OrgRow, PayerRow } from "@web/types/api";
 import AuditLogViewer from "./audit-viewer";
+import PendingMembersPage from "./pending-members/page";
 
-type AdminTab = "payers" | "settings" | "users" | "audit";
+type AdminTab = "payers" | "settings" | "users" | "pending" | "audit";
 
 export default function AdminPage() {
   const queryClient = useQueryClient();
@@ -81,6 +82,7 @@ export default function AdminPage() {
     { id: "payers", label: "Payers" },
     { id: "settings", label: "Settings" },
     { id: "users", label: "Users" },
+    { id: "pending", label: "Pending Members" },
     { id: "audit", label: "Audit Log" },
   ];
 
@@ -328,6 +330,8 @@ export default function AdminPage() {
               </p>
             </div>
           )}
+
+          {activeTab === "pending" && <PendingMembersPage />}
 
           {activeTab === "audit" && <AuditLogViewer />}
         </div>

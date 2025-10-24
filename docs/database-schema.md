@@ -1,6 +1,6 @@
 # Database Schema Documentation
 
-**Last Updated:** 2025-10-17
+**Last Updated:** 2025-10-24
 **Database:** PostgreSQL 15+ (Supabase)
 **Security:** Row Level Security (RLS) enabled on all tables
 
@@ -68,18 +68,32 @@ Healthcare organizations (clinics, practices)
 
 #### `member`
 
-Links Supabase auth users to organizations with roles
+Links Supabase auth users to organizations with roles and membership status
 
-| Column       | Type        | Description                      |
-| ------------ | ----------- | -------------------------------- |
-| `id`         | UUID        | Primary key                      |
-| `org_id`     | UUID        | FK → `org.id`                    |
-| `user_id`    | UUID        | FK → `auth.users` (Supabase)     |
-| `role`       | TEXT        | `admin` \| `staff` \| `referrer` |
-| `created_at` | TIMESTAMPTZ | Creation timestamp               |
+| Column       | Type        | Description                         |
+| ------------ | ----------- | ----------------------------------- |
+| `id`         | UUID        | Primary key                         |
+| `org_id`     | UUID        | FK → `org.id`                       |
+| `user_id`    | UUID        | FK → `auth.users` (Supabase)        |
+| `role`       | TEXT        | `admin` \| `staff` \| `referrer`    |
+| `status`     | TEXT        | `pending` \| `active` \| `rejected` |
+| `created_at` | TIMESTAMPTZ | Creation timestamp                  |
 
 **Unique Constraint**: `(org_id, user_id)`
 **RLS**: Users can view members of orgs they belong to; admins can modify
+
+**Membership Status Workflow**:
+
+- `pending`: User has signed up and requested to join an existing organization. Cannot access org data until approved.
+- `active`: User has been approved by an admin (or is the creator of a new organization). Can access org data.
+- `rejected`: User's membership request was denied by an admin. Cannot access org data.
+
+**Notes**:
+
+- When a user creates a new organization, they are automatically assigned `admin` role with `active` status
+- When a user joins an existing organization, they are assigned `staff` role (or requested role if not admin) with `pending` status
+- All API endpoints check for `active` status before granting access to organization resources
+- Admins can approve or reject pending memberships via `/api/admin/pending-members`
 
 ---
 
@@ -479,8 +493,10 @@ Greenlight PA implements a three-tier role-based access control system enforced 
 The application enforces RBAC through middleware functions in `apps/web/app/api/_lib/org.ts`:
 
 1. **`requireUser(request)`** - Authenticates user, throws 401 if not logged in
-2. **`getOrgContext(request, orgId)`** - Resolves user's organization and role
-3. **`requireOrgAdmin(request, orgId)`** - Ensures user has admin role, throws 403 otherwise
+2. **`getOrgContext(request, orgId)`** - Resolves user's organization and role (checks for `active` status)
+3. **`requireOrgAdmin(request, orgId)`** - Ensures user has admin role and `active` status, throws 403 otherwise
+
+All middleware functions check that the user has `status = 'active'` before granting access. Pending or rejected memberships result in 403 errors with appropriate messages.
 
 **Example Usage:**
 
@@ -503,15 +519,16 @@ export async function GET(request: NextRequest) {
 Row Level Security policies use helper functions to enforce org membership:
 
 ```sql
--- Helper: get_user_org_ids
+-- Helper: get_user_org_ids (only active memberships)
 CREATE FUNCTION get_user_org_ids(user_uuid UUID)
 RETURNS UUID[] AS $$
   SELECT ARRAY_AGG(org_id)
   FROM member
-  WHERE user_id = user_uuid;
+  WHERE user_id = user_uuid
+    AND status = 'active';
 $$ LANGUAGE SQL SECURITY DEFINER;
 
--- Helper: is_org_admin
+-- Helper: is_org_admin (only active admin memberships)
 CREATE FUNCTION is_org_admin(user_uuid UUID, org_uuid UUID)
 RETURNS BOOLEAN AS $$
   SELECT EXISTS (
@@ -519,6 +536,7 @@ RETURNS BOOLEAN AS $$
     WHERE user_id = user_uuid
       AND org_id = org_uuid
       AND role = 'admin'
+      AND status = 'active'
   );
 $$ LANGUAGE SQL SECURITY DEFINER;
 ```
@@ -555,19 +573,39 @@ The dashboard navigation conditionally shows admin-only features:
 - **Admin Tab**: Hidden for non-admin users (see `apps/web/app/dashboard/layout.tsx`)
 - **Future**: Admin-only buttons/forms will be disabled or hidden based on user role
 
-### Provisioning Flow
+### Signup and Provisioning Flow
 
-When a user signs up and creates an organization:
+The signup process has two paths: creating a new organization or joining an existing one.
 
-1. User authenticates via Supabase Auth (`auth.users`)
-2. `POST /api/auth/provision` creates:
-   - New `org` record
-   - New `member` record with role:
-     - `admin` if first user in new org
-     - `staff` (or requested role) if org exists
-3. Subsequent logins resolve role from `member` table
+#### New Organization Creation
 
-**Security Consideration**: The provisioning endpoint must validate that only existing admins can create new admin users for an existing organization. Self-signup should always default to `staff`.
+1. User signs up via `/signup` (Step 1: credentials)
+2. User selects "Create New Organization" (Step 2)
+3. `POST /api/auth/provision` with `createNew: true`:
+   - Creates new `org` record
+   - Creates `member` record with `role: admin`, `status: active`
+   - User gains immediate access to their new organization
+
+#### Joining Existing Organization
+
+1. User signs up via `/signup` (Step 1: credentials)
+2. User browses and selects an existing organization via `GET /api/organizations/public` (Step 2)
+3. `POST /api/auth/provision` with `orgId`:
+   - Creates `member` record with `role: staff` (or requested role if not admin), `status: pending`
+   - Returns pending status message
+4. User cannot access dashboard until approved
+5. Organization admin reviews pending request via `/dashboard/admin` → "Pending Members" tab
+6. Admin approves/rejects via `PATCH /api/admin/pending-members`:
+   - **Approve**: Sets `status: active`, user can now access org
+   - **Reject**: Sets `status: rejected`, user cannot access org
+7. On next login attempt, status check determines if user can access dashboard
+
+**Security Considerations**:
+
+- Self-signup to existing orgs defaults to `staff` role and `pending` status
+- Users cannot self-escalate to `admin` role for existing organizations
+- All API endpoints check for `active` membership status before granting access
+- Login flow includes status check to prevent pending users from accessing dashboard
 
 ---
 

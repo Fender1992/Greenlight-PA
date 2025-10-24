@@ -15,7 +15,14 @@ import { supabaseAdmin } from "@greenlight/db";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, email, orgId, role: requestedRole } = body;
+    const {
+      userId,
+      email,
+      orgId,
+      orgName,
+      role: requestedRole,
+      createNew,
+    } = body;
 
     if (!userId || !email) {
       return NextResponse.json(
@@ -37,81 +44,52 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already has membership in any org
-    const { data: existingMember } = await supabaseAdmin
+    const { data: existingMembers } = await supabaseAdmin
       .from("member")
-      .select("id, org_id, role")
-      .eq("user_id", userId)
-      .single();
+      .select("id, org_id, role, status")
+      .eq("user_id", userId);
 
-    if (existingMember) {
-      // User already provisioned - don't modify existing membership
-      return NextResponse.json({
-        success: true,
-        message: "User already provisioned",
-        data: {
-          orgId: existingMember.org_id,
-          role: existingMember.role,
-        },
-      });
+    if (existingMembers && existingMembers.length > 0) {
+      // User already has membership(s)
+      const activeMember = existingMembers.find((m) => m.status === "active");
+      const pendingMember = existingMembers.find((m) => m.status === "pending");
+
+      if (activeMember) {
+        // User has active membership
+        return NextResponse.json({
+          success: true,
+          message: "User already provisioned",
+          data: {
+            orgId: activeMember.org_id,
+            role: activeMember.role,
+            status: "active",
+          },
+        });
+      }
+
+      if (pendingMember) {
+        // User has pending membership
+        return NextResponse.json({
+          success: true,
+          message: "Membership request pending approval",
+          data: {
+            orgId: pendingMember.org_id,
+            role: pendingMember.role,
+            status: "pending",
+          },
+        });
+      }
     }
 
-    // Determine if joining existing org or creating new one
-    if (orgId) {
-      // Joining existing organization
-      // Verify org exists
-      const { data: existingOrg } = await supabaseAdmin
-        .from("org")
-        .select("id")
-        .eq("id", orgId)
-        .single();
+    // Determine if creating new org or joining existing one
+    if (createNew) {
+      // Creating new organization - first user is always admin with active status
+      const newOrgName = orgName || `Organization for ${email}`;
 
-      if (!existingOrg) {
-        return NextResponse.json(
-          { success: false, error: "Organization not found" },
-          { status: 404 }
-        );
-      }
-
-      // Determine role for new member joining existing org
-      // Default to staff, only allow admin if explicitly requested AND authorized
-      let assignedRole: "admin" | "staff" | "referrer" = "staff";
-
-      if (requestedRole === "admin") {
-        // TODO: In future, validate that an existing admin invited this user
-        // For now, prevent self-escalation to admin on existing orgs
-        console.warn(
-          `User ${userId} requested admin role for existing org ${orgId}, denied`
-        );
-        assignedRole = "staff";
-      } else if (requestedRole === "referrer") {
-        assignedRole = "referrer";
-      }
-
-      // Create member record for existing org
-      const { error: memberError } = await supabaseAdmin.from("member").insert({
-        org_id: orgId,
-        user_id: userId,
-        role: assignedRole,
-      });
-
-      if (memberError) {
-        console.error("Error creating member:", memberError);
-        return NextResponse.json(
-          { success: false, error: "Failed to create member record" },
-          { status: 500 }
-        );
-      }
-
-      return NextResponse.json({
-        success: true,
-        data: { orgId, userId, role: assignedRole },
-      });
-    } else {
-      // Creating new organization - first user is always admin
       const { data: org, error: orgError } = await supabaseAdmin
         .from("org")
         .insert({
-          name: `Organization for ${email}`,
+          name: newOrgName,
         })
         .select()
         .single();
@@ -124,11 +102,12 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // First user in new org is always admin, regardless of requested role
+      // First user in new org is always admin with active status
       const { error: memberError } = await supabaseAdmin.from("member").insert({
         org_id: org.id,
         user_id: userId,
         role: "admin",
+        status: "active", // Auto-approved for new org creator
       });
 
       if (memberError) {
@@ -143,8 +122,73 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        data: { orgId: org.id, userId, role: "admin" },
+        data: { orgId: org.id, userId, role: "admin", status: "active" },
+        message: "New organization created successfully",
       });
+    } else if (orgId) {
+      // Joining existing organization - requires admin approval
+      // Verify org exists
+      const { data: existingOrg } = await supabaseAdmin
+        .from("org")
+        .select("id, name")
+        .eq("id", orgId)
+        .single();
+
+      if (!existingOrg) {
+        return NextResponse.json(
+          { success: false, error: "Organization not found" },
+          { status: 404 }
+        );
+      }
+
+      // Determine role for new member joining existing org
+      // Default to staff, prevent self-escalation to admin
+      let assignedRole: "admin" | "staff" | "referrer" = "staff";
+
+      if (requestedRole === "admin") {
+        // Prevent self-escalation to admin on existing orgs
+        console.warn(
+          `User ${userId} requested admin role for existing org ${orgId}, denied`
+        );
+        assignedRole = "staff";
+      } else if (requestedRole === "referrer") {
+        assignedRole = "referrer";
+      } else if (requestedRole === "staff") {
+        assignedRole = "staff";
+      }
+
+      // Create member record with PENDING status (requires admin approval)
+      const { error: memberError } = await supabaseAdmin.from("member").insert({
+        org_id: orgId,
+        user_id: userId,
+        role: assignedRole,
+        status: "pending", // Pending until admin approves
+      });
+
+      if (memberError) {
+        console.error("Error creating member:", memberError);
+        return NextResponse.json(
+          { success: false, error: "Failed to create member request" },
+          { status: 500 }
+        );
+      }
+
+      // TODO: Send notification to org admins about pending request
+
+      return NextResponse.json({
+        success: true,
+        data: { orgId, userId, role: assignedRole, status: "pending" },
+        message:
+          "Membership request submitted. An admin will review your request.",
+      });
+    } else {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Must provide either orgId or createNew=true",
+        },
+        { status: 400 }
+      );
     }
   } catch (error) {
     console.error("Provisioning error:", error);

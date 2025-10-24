@@ -61,13 +61,14 @@ export async function requireUser(
 
 /**
  * Resolves an organization id either from an explicit query parameter
- * or from the authenticated user's memberships.
+ * or from the authenticated user's ACTIVE memberships.
  */
 export async function resolveOrgId(user: User, providedOrgId: string | null) {
   const { data, error } = await supabaseAdmin
     .from("member")
-    .select("org_id")
-    .eq("user_id", user.id);
+    .select("org_id, status")
+    .eq("user_id", user.id)
+    .eq("status", "active"); // Only active memberships
 
   if (error) {
     console.error("Failed to fetch organization memberships", error);
@@ -80,21 +81,36 @@ export async function resolveOrgId(user: User, providedOrgId: string | null) {
     if (!memberships.includes(providedOrgId)) {
       throw new HttpError(
         403,
-        "User does not have access to this organization"
+        "User does not have active access to this organization"
       );
     }
     return providedOrgId;
   }
 
   if (memberships.length === 0) {
-    throw new HttpError(404, "No organization found for current user");
+    // Check if user has pending memberships
+    const { data: pendingData } = await supabaseAdmin
+      .from("member")
+      .select("org_id")
+      .eq("user_id", user.id)
+      .eq("status", "pending")
+      .limit(1);
+
+    if (pendingData && pendingData.length > 0) {
+      throw new HttpError(
+        403,
+        "Your membership is pending approval. Please wait for an admin to approve your request."
+      );
+    }
+
+    throw new HttpError(404, "No active organization found for current user");
   }
 
   return memberships[0];
 }
 
 /**
- * Resolves the user's role in the given organization.
+ * Resolves the user's role in the given organization (must be ACTIVE member).
  */
 export async function resolveOrgRole(
   user: User,
@@ -102,13 +118,17 @@ export async function resolveOrgRole(
 ): Promise<"admin" | "staff" | "referrer"> {
   const { data, error } = await supabaseAdmin
     .from("member")
-    .select("role")
+    .select("role, status")
     .eq("user_id", user.id)
     .eq("org_id", orgId)
+    .eq("status", "active") // Only active members
     .single();
 
   if (error || !data) {
-    throw new HttpError(403, "User does not have access to this organization");
+    throw new HttpError(
+      403,
+      "User does not have active access to this organization"
+    );
   }
 
   return data.role as "admin" | "staff" | "referrer";

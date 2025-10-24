@@ -55,6 +55,28 @@ export default function Home() {
           }),
         });
 
+        // Check membership status before redirecting
+        try {
+          const statusResponse = await fetch("/api/auth/status");
+          const statusData = await statusResponse.json();
+
+          if (!statusResponse.ok || !statusData.success) {
+            // Handle pending membership
+            if (statusData.error?.includes("pending approval")) {
+              setError(
+                "Your membership is pending approval. Please wait for an admin to approve your request."
+              );
+              // Sign out the user since they can't access the dashboard yet
+              await supabase.auth.signOut();
+              return;
+            }
+            // Other errors - still redirect, let dashboard handle it
+          }
+        } catch (statusError) {
+          console.error("Status check failed:", statusError);
+          // Continue to dashboard even if status check fails
+        }
+
         // Redirect to dashboard after successful login
         router.push("/dashboard");
       }

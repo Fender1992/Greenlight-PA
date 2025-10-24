@@ -51,6 +51,7 @@ export interface Database {
           org_id: string;
           user_id: string;
           role: string;
+          status: string;
           has_seen_tour: boolean;
           created_at: string;
         };
@@ -59,6 +60,7 @@ export interface Database {
           org_id: string;
           user_id: string;
           role?: string;
+          status?: string;
           has_seen_tour?: boolean;
           created_at?: string;
         };
@@ -67,6 +69,7 @@ export interface Database {
           org_id?: string;
           user_id?: string;
           role?: string;
+          status?: string;
           has_seen_tour?: boolean;
           created_at?: string;
         };
