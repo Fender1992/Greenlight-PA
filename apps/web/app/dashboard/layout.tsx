@@ -32,6 +32,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showOrgSelector, setShowOrgSelector] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [notifications, setNotifications] = useState<
     Array<{
       id: string;
@@ -187,11 +188,14 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       if (showOrgSelector && !target.closest(".org-selector-menu")) {
         setShowOrgSelector(false);
       }
+      if (showMoreMenu && !target.closest(".more-menu")) {
+        setShowMoreMenu(false);
+      }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showProfileMenu, showNotifications, showOrgSelector]);
+  }, [showProfileMenu, showNotifications, showOrgSelector, showMoreMenu]);
 
   const handleLogout = async () => {
     try {
@@ -274,6 +278,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
                 className="hidden sm:ml-6 sm:flex sm:space-x-8"
                 data-tour="navigation"
               >
+                {/* Primary Navigation Links */}
                 <Link
                   href="/dashboard"
                   className={
@@ -305,40 +310,90 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
                 >
                   Orders
                 </Link>
-                <Link
-                  href="/dashboard/metrics"
-                  className={
-                    pathname === "/dashboard/metrics"
-                      ? "border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                  }
-                >
-                  Metrics
-                </Link>
-                {userRole === "admin" && (
-                  <Link
-                    href="/dashboard/admin"
+
+                {/* More Dropdown Menu */}
+                <div className="relative more-menu">
+                  <button
+                    onClick={() => setShowMoreMenu(!showMoreMenu)}
                     className={
-                      pathname === "/dashboard/admin"
-                        ? "border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                      pathname === "/dashboard/metrics" ||
+                      pathname === "/dashboard/admin" ||
+                      pathname === "/dashboard/super-admin" ||
+                      pathname === "/dashboard/preferences"
+                        ? "border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium gap-1"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium gap-1"
                     }
                   >
-                    Admin
-                  </Link>
-                )}
-                {isSuperAdmin && (
-                  <Link
-                    href="/dashboard/super-admin"
-                    className={
-                      pathname === "/dashboard/super-admin"
-                        ? "border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                    }
-                  >
-                    Super Admin
-                  </Link>
-                )}
+                    More
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+                  {showMoreMenu && (
+                    <div className="absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                      <div className="py-1">
+                        <Link
+                          href="/dashboard/metrics"
+                          onClick={() => setShowMoreMenu(false)}
+                          className={`block px-4 py-2 text-sm hover:bg-gray-100 ${
+                            pathname === "/dashboard/metrics"
+                              ? "bg-blue-50 text-blue-700"
+                              : "text-gray-700"
+                          }`}
+                        >
+                          📊 Metrics
+                        </Link>
+                        {userRole === "admin" && (
+                          <Link
+                            href="/dashboard/admin"
+                            onClick={() => setShowMoreMenu(false)}
+                            className={`block px-4 py-2 text-sm hover:bg-gray-100 ${
+                              pathname === "/dashboard/admin"
+                                ? "bg-blue-50 text-blue-700"
+                                : "text-gray-700"
+                            }`}
+                          >
+                            ⚙️ Admin
+                          </Link>
+                        )}
+                        {isSuperAdmin && (
+                          <Link
+                            href="/dashboard/super-admin"
+                            onClick={() => setShowMoreMenu(false)}
+                            className={`block px-4 py-2 text-sm hover:bg-gray-100 ${
+                              pathname === "/dashboard/super-admin"
+                                ? "bg-blue-50 text-blue-700"
+                                : "text-gray-700"
+                            }`}
+                          >
+                            👑 Super Admin
+                          </Link>
+                        )}
+                        <Link
+                          href="/dashboard/preferences"
+                          onClick={() => setShowMoreMenu(false)}
+                          className={`block px-4 py-2 text-sm hover:bg-gray-100 ${
+                            pathname === "/dashboard/preferences"
+                              ? "bg-blue-50 text-blue-700"
+                              : "text-gray-700"
+                          }`}
+                        >
+                          🔧 Preferences
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-4">
