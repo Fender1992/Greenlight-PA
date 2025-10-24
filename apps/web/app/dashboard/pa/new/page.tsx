@@ -36,8 +36,17 @@ function PaCreateForm() {
 
   const payersQuery = useQuery({
     queryKey: ["payers"],
-    queryFn: () => apiGet<ApiResponse<PayerRow[]>>("/api/payers"),
-    select: (response) => response.data ?? [],
+    queryFn: async () => {
+      console.log("[PA Form] Fetching payers...");
+      const response = await apiGet<ApiResponse<PayerRow[]>>("/api/payers");
+      console.log("[PA Form] Payers response:", response);
+      return response;
+    },
+    select: (response) => {
+      const payers = response.data ?? [];
+      console.log("[PA Form] Selected payers:", payers);
+      return payers;
+    },
   });
 
   const createMutation = useMutation({
@@ -77,6 +86,16 @@ function PaCreateForm() {
 
   const orders = ordersQuery.data ?? [];
   const payers = payersQuery.data ?? [];
+
+  // Debug logging
+  console.log("[PA Form] Query states:", {
+    ordersLoading: ordersQuery.isLoading,
+    ordersError: ordersQuery.isError,
+    ordersCount: orders.length,
+    payersLoading: payersQuery.isLoading,
+    payersError: payersQuery.isError,
+    payersCount: payers.length,
+  });
 
   const selectedOrder = useMemo(() => {
     return orders.find((order) => order.id === orderId) ?? null;
