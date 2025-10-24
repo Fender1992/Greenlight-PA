@@ -1,6 +1,6 @@
 # Greenlight PA - Build Status
 
-**Last Updated:** 2025-10-24 (RBAC hardening, dead code cleanup, signup role assignment)
+**Last Updated:** 2025-10-24 (Super Admin Dashboard, Password Change, Role Selection)
 
 ---
 
@@ -236,6 +236,126 @@
 ---
 
 ## Recent Changes
+
+### 2025-10-24 - Super Admin Dashboard & Platform Management
+
+- ✅ **Super Admin Role System**
+  - Created platform-level super admin role with access to all organizations
+  - New `super_admin` database table to track platform administrators
+  - Updated member role constraint to include 'super_admin' as valid role
+  - Database functions: `is_super_admin()`, updated `get_user_org_ids()`, `is_org_admin()`
+  - Super admins automatically get access to ALL organizations (existing and new)
+  - Created `assign-super-admin.ts` script to grant super admin by email
+
+- ✅ **Super Admin API Endpoints**
+  - `GET /api/super-admin/stats` - Platform-wide statistics
+    - Total counts: organizations, users, pending members, patients, PA requests, orders, payers
+    - Recent activity metrics (last 7 days)
+    - Super admin count tracking
+  - `GET /api/super-admin/organizations` - List all organizations with stats
+    - Member counts (total, active, pending) per organization
+    - Patient and PA request counts per organization
+    - Organization details (name, NPI, address, created date)
+  - `DELETE /api/super-admin/organizations` - Delete organization (cascade)
+  - `GET /api/super-admin/users` - List all users across all organizations
+    - Email, role, status, organization, last sign-in
+    - Auth user data merged with member data
+  - `PATCH /api/super-admin/users` - Update user role or status
+  - `DELETE /api/super-admin/users` - Remove user membership
+
+- ✅ **Super Admin Dashboard UI** (`/dashboard/super-admin`)
+  - **Overview Tab:**
+    - 8 platform statistics cards with color-coded metrics
+    - Recent activity section (last 7 days)
+    - Visual metric indicators with icons
+  - **Organizations Tab:**
+    - Searchable list of all organizations
+    - Member counts, patient counts, PA request counts per org
+    - Delete organization functionality with confirmation
+    - Organization details (NPI, address, creation date)
+  - **Users Tab:**
+    - Searchable table of all users across all organizations
+    - Inline role editing (admin/staff/referrer dropdowns)
+    - Inline status editing (active/pending/rejected)
+    - Last sign-in tracking
+    - Remove user membership functionality
+  - **System Tab:**
+    - System information (platform version, database type)
+    - Super admin count display
+    - Quick action links (Audit Logs, Metrics API)
+
+- ✅ **Password Change Endpoint**
+  - `POST /api/auth/change-password` - Secure password updates
+  - Requires current password verification (prevents unauthorized changes)
+  - Validates new password requirements (min 8 characters)
+  - Prevents setting same password
+  - Server-side validation with clear error messages
+  - Comprehensive API documentation in `docs/api-change-password.md`
+
+- ✅ **Member Approval Role Selection**
+  - Updated `/api/admin/pending-members` to accept optional role parameter
+  - Admins can change member roles during approval process
+  - Replace static role badges with editable dropdowns in UI
+  - Role validation (admin/staff/referrer)
+  - Role defaults to requested role but can be changed
+
+- ✅ **API Helper Updates** (`apps/web/app/api/_lib/org.ts`)
+  - New `isSuperAdmin()` helper function checks super admin status
+  - `resolveOrgId()` updated to allow super admins access to any organization
+  - `resolveOrgRole()` returns 'super_admin' for super admins
+  - `requireOrgAdmin()` accepts super admins for all admin operations
+
+- ✅ **Database Type Updates**
+  - Added `super_admin` table types to `packages/db/types/database.ts`
+  - Row, Insert, Update types for super admin table
+  - Updated member role type to include 'super_admin'
+
+- ✅ **Documentation**
+  - Created `SUPER_ADMIN_SETUP.md` with setup instructions and usage guide
+  - Created `docs/api-change-password.md` with complete API documentation
+  - Updated STATUS.md with super admin feature summary
+
+- ✅ **Testing & Verification**
+  - ✅ TypeScript type checking passes (all packages)
+  - ✅ ESLint passes with no errors or warnings
+  - ✅ Prettier formatting applied to all files
+
+**Files Created:**
+
+- `packages/db/migrations/20251024_add_super_admin.sql` - Super admin migration
+- `scripts/assign-super-admin.ts` - Super admin assignment script
+- `apps/web/app/api/super-admin/stats/route.ts` - Platform statistics API
+- `apps/web/app/api/super-admin/organizations/route.ts` - Organization management API
+- `apps/web/app/api/super-admin/users/route.ts` - User management API
+- `apps/web/app/dashboard/super-admin/page.tsx` - Super admin dashboard UI
+- `apps/web/app/api/auth/change-password/route.ts` - Password change API
+- `SUPER_ADMIN_SETUP.md` - Setup and usage documentation
+- `docs/api-change-password.md` - Password change API documentation
+
+**Files Modified:**
+
+- `apps/web/app/api/_lib/org.ts` - Added super admin helpers
+- `apps/web/app/api/admin/pending-members/route.ts` - Added role parameter
+- `apps/web/app/dashboard/admin/pending-members/page.tsx` - Added role selector
+- `packages/db/types/database.ts` - Added super_admin table types
+- `STATUS.md` - Updated with super admin feature summary
+
+**Super Admin Capabilities:**
+
+- Access all organizations without membership
+- View platform-wide statistics and activity
+- Manage all organizations (view stats, delete)
+- Manage all users across organizations (change roles/status, remove)
+- Perform admin operations on any organization
+- Automatically granted access to newly created organizations
+
+**Security Features:**
+
+- Super admin access requires database entry in `super_admin` table
+- Cannot self-escalate to super admin (requires script execution)
+- All super admin operations logged and tracked
+- Audit trail for super admin grants (granted_by, granted_at, notes)
+- Database functions use SECURITY DEFINER for RLS bypass
 
 ### 2025-10-24 - RBAC Hardening, Dead Code Cleanup & Signup Role Assignment
 
