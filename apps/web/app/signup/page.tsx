@@ -22,6 +22,10 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -160,6 +164,10 @@ export default function SignupPage() {
           orgId: orgMode === "join" ? selectedOrg : undefined,
           orgName: orgMode === "create" ? newOrgName : undefined,
           role: "staff", // Default role for new members
+          firstName,
+          lastName,
+          phoneNumber,
+          address,
         }),
       });
 
@@ -249,6 +257,38 @@ export default function SignupPage() {
 
             <div className="rounded-md shadow-sm -space-y-px">
               <div>
+                <label htmlFor="firstName" className="sr-only">
+                  First Name
+                </label>
+                <input
+                  id="firstName"
+                  name="firstName"
+                  type="text"
+                  autoComplete="given-name"
+                  required
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  placeholder="First Name"
+                />
+              </div>
+              <div>
+                <label htmlFor="lastName" className="sr-only">
+                  Last Name
+                </label>
+                <input
+                  id="lastName"
+                  name="lastName"
+                  type="text"
+                  autoComplete="family-name"
+                  required
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  placeholder="Last Name"
+                />
+              </div>
+              <div>
                 <label htmlFor="email" className="sr-only">
                   Email address
                 </label>
@@ -260,8 +300,40 @@ export default function SignupPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                   placeholder="Email address"
+                />
+              </div>
+              <div>
+                <label htmlFor="phoneNumber" className="sr-only">
+                  Phone Number
+                </label>
+                <input
+                  id="phoneNumber"
+                  name="phoneNumber"
+                  type="tel"
+                  autoComplete="tel"
+                  required
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  placeholder="Phone Number"
+                />
+              </div>
+              <div>
+                <label htmlFor="address" className="sr-only">
+                  Address
+                </label>
+                <input
+                  id="address"
+                  name="address"
+                  type="text"
+                  autoComplete="street-address"
+                  required
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  placeholder="Address"
                 />
               </div>
               <div>

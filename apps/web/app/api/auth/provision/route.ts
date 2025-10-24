@@ -22,6 +22,10 @@ export async function POST(request: NextRequest) {
       orgName,
       role: requestedRole,
       createNew,
+      firstName,
+      lastName,
+      phoneNumber,
+      address,
     } = body;
 
     if (!userId || !email) {
@@ -108,6 +112,10 @@ export async function POST(request: NextRequest) {
         user_id: userId,
         role: "admin",
         status: "active", // Auto-approved for new org creator
+        first_name: firstName,
+        last_name: lastName,
+        phone_number: phoneNumber,
+        address: address,
       });
 
       if (memberError) {
@@ -163,6 +171,10 @@ export async function POST(request: NextRequest) {
         user_id: userId,
         role: assignedRole,
         status: "pending", // Pending until admin approves
+        first_name: firstName,
+        last_name: lastName,
+        phone_number: phoneNumber,
+        address: address,
       });
 
       if (memberError) {
