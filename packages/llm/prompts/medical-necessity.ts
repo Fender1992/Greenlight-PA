@@ -3,7 +3,7 @@
  * Package: @greenlight/llm/prompts/medical-necessity | Status: [Check STATUS.md] | Modified: 2025-10-17
  */
 
-import { callClaude, type LLMResponse } from "../client";
+import { callCacheGPT, type LLMResponse } from "../client";
 
 /**
  * Medical Necessity Summary
@@ -102,7 +102,7 @@ ${clinic_notes}
 
   userPrompt += `\n\nGenerate the medical necessity narrative as JSON. Return ONLY the JSON object with the three required fields.`;
 
-  const response = await callClaude({
+  const response = await callCacheGPT({
     system: MEDICAL_NECESSITY_SYSTEM_PROMPT,
     messages: [{ role: "user", content: userPrompt }],
     temperature: 0.5, // Balanced creativity and consistency

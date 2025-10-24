@@ -5,9 +5,10 @@
 
 // Client
 export {
-  anthropic,
-  callClaude,
-  callClaudeStream,
+  callCacheGPT,
+  callCacheGPTStream,
+  callClaude, // Deprecated alias
+  callClaudeStream, // Deprecated alias
   DEFAULT_MODEL,
   DEFAULT_MAX_TOKENS,
   type LLMResponse,

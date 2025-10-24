@@ -1,47 +1,37 @@
 # @greenlight/llm
 
-LLM prompt builders for Greenlight PA using Anthropic Claude.
+LLM prompt builders for Greenlight PA using CacheGPT.
 
 ## Features
 
 - Checklist generation from payer policies
 - Medical necessity summary generation
 - Prompt versioning and tracking
-- Streaming support
+- Direct CacheGPT API integration (no SDK dependencies)
 - Type-safe responses
 
 ## Setup
 
 ### Prerequisites
 
-- Anthropic API key
-- Claude model access (claude-3-5-sonnet-20241022 or later)
+- CacheGPT API key
 
 ### Environment Variables
 
 ```bash
 # .env.local
 ENABLE_LLM=true
-
-# Option 1: Use CacheGPT (recommended for caching/cost optimization)
 CACHEGPT_API_KEY=cgpt_sk_...
-
-# Option 2: Use direct Anthropic API
-# ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-**Using CacheGPT (Recommended):**
+**Using CacheGPT:**
 
-CacheGPT provides caching and cost optimization for Anthropic API calls. To use it:
+This package makes direct HTTP calls to CacheGPT:
 
 1. Set `CACHEGPT_API_KEY` to your CacheGPT key (starts with `cgpt_sk_...`)
-2. The SDK will automatically route requests through `https://cachegpt.app/v1`
-3. Your CacheGPT proxy handles caching and forwards to Anthropic API
-
-**Using Direct Anthropic API:**
-
-1. Set `ANTHROPIC_API_KEY` to your Anthropic key (starts with `sk-ant-...`)
-2. The SDK will use the default Anthropic API endpoint directly
+2. All requests are sent to `https://cachegpt.app/api/v1/messages`
+3. CacheGPT handles caching, rate limiting, and model routing
+4. No external SDK dependencies - uses native fetch API
 
 ## Usage
 
@@ -106,14 +96,14 @@ if (result.success) {
 }
 ```
 
-### Direct Claude API Calls
+### Direct CacheGPT API Calls
 
 For custom prompts:
 
 ```typescript
-import { callClaude } from "@greenlight/llm";
+import { callCacheGPT } from "@greenlight/llm";
 
-const response = await callClaude({
+const response = await callCacheGPT({
   system: "You are a medical coding assistant",
   messages: [
     {
@@ -135,9 +125,9 @@ if (response.success) {
 For real-time output:
 
 ```typescript
-import { callClaudeStream } from "@greenlight/llm";
+import { callCacheGPTStream } from "@greenlight/llm";
 
-for await (const chunk of callClaudeStream({
+for await (const chunk of callCacheGPTStream({
   system: "You are a medical writer",
   messages: [
     { role: "user", content: "Write a medical necessity statement..." },

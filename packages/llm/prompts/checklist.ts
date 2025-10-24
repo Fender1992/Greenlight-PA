@@ -3,7 +3,7 @@
  * Package: @greenlight/llm/prompts/checklist | Status: [Check STATUS.md] | Modified: 2025-10-17
  */
 
-import { callClaude, type LLMResponse } from "../client";
+import { callCacheGPT, type LLMResponse } from "../client";
 
 /**
  * Checklist Item
@@ -94,7 +94,7 @@ export async function generateChecklist(
 
   userPrompt += `\n\nGenerate a JSON array of checklist items. Return ONLY the JSON array, no additional text.`;
 
-  const response = await callClaude({
+  const response = await callCacheGPT({
     system: CHECKLIST_SYSTEM_PROMPT,
     messages: [{ role: "user", content: userPrompt }],
     temperature: 0.3, // Lower temperature for more deterministic output
