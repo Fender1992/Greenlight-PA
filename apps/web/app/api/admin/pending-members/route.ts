@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
  * PATCH /api/admin/pending-members
  *
  * Approve or reject a pending member request
- * Body: { memberId: string, action: 'approve' | 'reject' }
+ * Body: { memberId: string, action: 'approve' | 'reject', role?: 'admin' | 'staff' | 'referrer' }
  */
 export async function PATCH(request: NextRequest) {
   try {
@@ -94,7 +94,7 @@ export async function PATCH(request: NextRequest) {
       searchParams.get("org_id")
     );
     const body = await request.json();
-    const { memberId, action } = body;
+    const { memberId, action, role } = body;
 
     if (!memberId || !action) {
       throw new HttpError(400, "Missing memberId or action");
@@ -102,6 +102,14 @@ export async function PATCH(request: NextRequest) {
 
     if (action !== "approve" && action !== "reject") {
       throw new HttpError(400, "Action must be 'approve' or 'reject'");
+    }
+
+    // Validate role if provided
+    if (role && !["admin", "staff", "referrer"].includes(role)) {
+      throw new HttpError(
+        400,
+        "Invalid role. Must be 'admin', 'staff', or 'referrer'"
+      );
     }
 
     // Verify the member belongs to this org and is pending
@@ -118,10 +126,17 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (action === "approve") {
-      // Approve the member
+      // Approve the member and optionally update role
+      const updateData: { status: string; role?: string } = {
+        status: "active",
+      };
+      if (role) {
+        updateData.role = role;
+      }
+
       const { data, error } = await supabaseAdmin
         .from("member")
-        .update({ status: "active" })
+        .update(updateData)
         .eq("id", memberId)
         .select()
         .single();

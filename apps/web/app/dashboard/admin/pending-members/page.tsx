@@ -22,6 +22,9 @@ export default function PendingMembersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState<{
+    [key: string]: "admin" | "staff" | "referrer";
+  }>({});
 
   useEffect(() => {
     fetchPendingMembers();
@@ -38,7 +41,15 @@ export default function PendingMembersPage() {
         throw new Error(data.error || "Failed to fetch pending members");
       }
 
-      setMembers(data.data || []);
+      const membersList = data.data || [];
+      setMembers(membersList);
+
+      // Initialize selectedRole with current roles
+      const roleMap: { [key: string]: "admin" | "staff" | "referrer" } = {};
+      membersList.forEach((member: PendingMember) => {
+        roleMap[member.id] = member.role;
+      });
+      setSelectedRole(roleMap);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to load pending members"
@@ -70,10 +81,21 @@ export default function PendingMembersPage() {
     setError(null);
 
     try {
+      const requestBody: {
+        memberId: string;
+        action: "approve" | "reject";
+        role?: "admin" | "staff" | "referrer";
+      } = { memberId, action };
+
+      // Include role when approving
+      if (action === "approve") {
+        requestBody.role = selectedRole[memberId];
+      }
+
       const response = await fetch("/api/admin/pending-members", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memberId, action }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
@@ -109,19 +131,6 @@ export default function PendingMembersPage() {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
-
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case "admin":
-        return "bg-purple-100 text-purple-800";
-      case "staff":
-        return "bg-blue-100 text-blue-800";
-      case "referrer":
-        return "bg-green-100 text-green-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
   };
 
   return (
@@ -223,12 +232,24 @@ export default function PendingMembersPage() {
                   </div>
 
                   <div className="flex items-center space-x-4">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(member.role)}`}
+                    <select
+                      value={selectedRole[member.id] || member.role}
+                      onChange={(e) =>
+                        setSelectedRole((prev) => ({
+                          ...prev,
+                          [member.id]: e.target.value as
+                            | "admin"
+                            | "staff"
+                            | "referrer",
+                        }))
+                      }
+                      disabled={processingId === member.id}
+                      className="text-xs font-medium px-2.5 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                     >
-                      {member.role.charAt(0).toUpperCase() +
-                        member.role.slice(1)}
-                    </span>
+                      <option value="admin">Admin</option>
+                      <option value="staff">Staff</option>
+                      <option value="referrer">Referrer</option>
+                    </select>
 
                     <div className="flex space-x-2">
                       <button
