@@ -61,6 +61,9 @@ export default function SuperAdminPage() {
   const { showToast, confirm } = useToast();
   const [activeTab, setActiveTab] = useState<SuperAdminTab>("overview");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showCreateOrgForm, setShowCreateOrgForm] = useState(false);
+  const [newOrgName, setNewOrgName] = useState("");
+  const [newOrgDomain, setNewOrgDomain] = useState("");
 
   // Fetch statistics
   const statsQuery = useQuery({
@@ -101,6 +104,35 @@ export default function SuperAdminPage() {
       return data.data as User[];
     },
     enabled: activeTab === "users",
+  });
+
+  // Create organization mutation
+  const createOrgMutation = useMutation({
+    mutationFn: async ({ name, domain }: { name: string; domain?: string }) => {
+      const response = await fetch("/api/super-admin/organizations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, domain }),
+      });
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || "Failed to create organization");
+      }
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["super-admin-organizations"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["super-admin-stats"] });
+      showToast("Organization created successfully", "success");
+      setShowCreateOrgForm(false);
+      setNewOrgName("");
+      setNewOrgDomain("");
+    },
+    onError: (error: Error) => {
+      showToast(error.message, "error");
+    },
   });
 
   // Delete organization mutation
@@ -185,6 +217,18 @@ export default function SuperAdminPage() {
       showToast(error.message, "error");
     },
   });
+
+  const handleCreateOrg = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newOrgName.trim()) {
+      showToast("Organization name is required", "error");
+      return;
+    }
+    createOrgMutation.mutate({
+      name: newOrgName.trim(),
+      domain: newOrgDomain.trim() || undefined,
+    });
+  };
 
   const handleDeleteOrg = async (org: Organization) => {
     const confirmed = await confirm(
@@ -394,15 +438,87 @@ export default function SuperAdminPage() {
 
           {activeTab === "organizations" && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <input
                   type="text"
                   placeholder="Search organizations..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                  className="flex-1 max-w-md px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
                 />
+                <button
+                  onClick={() => setShowCreateOrgForm(!showCreateOrgForm)}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                >
+                  {showCreateOrgForm ? "Cancel" : "+ Create Organization"}
+                </button>
               </div>
+
+              {showCreateOrgForm && (
+                <form
+                  onSubmit={handleCreateOrg}
+                  className="bg-white border border-gray-200 rounded-lg p-4 space-y-4"
+                >
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Create New Organization
+                  </h3>
+                  <div>
+                    <label
+                      htmlFor="org-name"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Organization Name *
+                    </label>
+                    <input
+                      id="org-name"
+                      type="text"
+                      value={newOrgName}
+                      onChange={(e) => setNewOrgName(e.target.value)}
+                      required
+                      placeholder="Enter organization name"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="org-domain"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Domain (Optional)
+                    </label>
+                    <input
+                      id="org-domain"
+                      type="text"
+                      value={newOrgDomain}
+                      onChange={(e) => setNewOrgDomain(e.target.value)}
+                      placeholder="example.com"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                    />
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      type="submit"
+                      disabled={createOrgMutation.isPending}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
+                    >
+                      {createOrgMutation.isPending
+                        ? "Creating..."
+                        : "Create Organization"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCreateOrgForm(false);
+                        setNewOrgName("");
+                        setNewOrgDomain("");
+                      }}
+                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
 
               {orgsQuery.isLoading ? (
                 <div className="text-center py-12">
