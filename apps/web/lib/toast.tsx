@@ -16,12 +16,31 @@ interface ToastContextType {
   showToast: (message: string, type: ToastType, duration?: number) => string;
   hideToast: (id: string) => void;
   updateToast: (id: string, message: string, type: ToastType) => void;
+  confirm: (
+    message: string,
+    options?: {
+      confirmText?: string;
+      cancelText?: string;
+      confirmVariant?: "danger" | "primary";
+    }
+  ) => Promise<boolean>;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
+interface ConfirmDialog {
+  message: string;
+  confirmText: string;
+  cancelText: string;
+  confirmVariant: "danger" | "primary";
+  resolve: (value: boolean) => void;
+}
+
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog | null>(
+    null
+  );
 
   const showToast = useCallback(
     (message: string, type: ToastType, duration = 5000): string => {
@@ -62,12 +81,53 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     [hideToast]
   );
 
+  const confirm = useCallback(
+    (
+      message: string,
+      options?: {
+        confirmText?: string;
+        cancelText?: string;
+        confirmVariant?: "danger" | "primary";
+      }
+    ): Promise<boolean> => {
+      return new Promise((resolve) => {
+        setConfirmDialog({
+          message,
+          confirmText: options?.confirmText || "Confirm",
+          cancelText: options?.cancelText || "Cancel",
+          confirmVariant: options?.confirmVariant || "primary",
+          resolve,
+        });
+      });
+    },
+    []
+  );
+
+  const handleConfirmClose = useCallback(
+    (confirmed: boolean) => {
+      if (confirmDialog) {
+        confirmDialog.resolve(confirmed);
+        setConfirmDialog(null);
+      }
+    },
+    [confirmDialog]
+  );
+
   return (
     <ToastContext.Provider
-      value={{ toasts, showToast, hideToast, updateToast }}
+      value={{ toasts, showToast, hideToast, updateToast, confirm }}
     >
       {children}
       <ToastContainer toasts={toasts} onDismiss={hideToast} />
+      {confirmDialog && (
+        <ConfirmDialogModal
+          message={confirmDialog.message}
+          confirmText={confirmDialog.confirmText}
+          cancelText={confirmDialog.cancelText}
+          confirmVariant={confirmDialog.confirmVariant}
+          onClose={handleConfirmClose}
+        />
+      )}
     </ToastContext.Provider>
   );
 }
@@ -215,6 +275,50 @@ function ToastItem({
           </svg>
         </button>
       )}
+    </div>
+  );
+}
+
+function ConfirmDialogModal({
+  message,
+  confirmText,
+  cancelText,
+  confirmVariant,
+  onClose,
+}: {
+  message: string;
+  confirmText: string;
+  cancelText: string;
+  confirmVariant: "danger" | "primary";
+  onClose: (confirmed: boolean) => void;
+}) {
+  const confirmBgColor =
+    confirmVariant === "danger"
+      ? "bg-red-600 hover:bg-red-700"
+      : "bg-blue-600 hover:bg-blue-700";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Confirm Action
+        </h3>
+        <p className="text-sm text-gray-600 mb-6">{message}</p>
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={() => onClose(false)}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            {cancelText}
+          </button>
+          <button
+            onClick={() => onClose(true)}
+            className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${confirmBgColor}`}
+          >
+            {confirmText}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -6,6 +6,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useToast } from "@web/lib/toast";
 
 interface PendingMember {
   id: string;
@@ -16,6 +17,7 @@ interface PendingMember {
 }
 
 export default function PendingMembersPage() {
+  const { showToast, confirm } = useToast();
   const [members, setMembers] = useState<PendingMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +53,16 @@ export default function PendingMembersPage() {
     memberId: string,
     action: "approve" | "reject"
   ) => {
-    if (!confirm(`Are you sure you want to ${action} this member request?`)) {
+    const confirmed = await confirm(
+      `Are you sure you want to ${action} this member request?`,
+      {
+        confirmText: action === "approve" ? "Approve" : "Reject",
+        cancelText: "Cancel",
+        confirmVariant: action === "reject" ? "danger" : "primary",
+      }
+    );
+
+    if (!confirmed) {
       return;
     }
 
@@ -73,10 +84,17 @@ export default function PendingMembersPage() {
 
       // Remove the member from the list
       setMembers((prev) => prev.filter((m) => m.id !== memberId));
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : `Failed to ${action} member`
+
+      // Show success toast
+      showToast(
+        `Member ${action === "approve" ? "approved" : "rejected"} successfully`,
+        "success"
       );
+    } catch (err) {
+      const errorMsg =
+        err instanceof Error ? err.message : `Failed to ${action} member`;
+      setError(errorMsg);
+      showToast(errorMsg, "error");
       console.error(`Error ${action}ing member:`, err);
     } finally {
       setProcessingId(null);
