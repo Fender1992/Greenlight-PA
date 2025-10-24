@@ -29,6 +29,22 @@ export default function DashboardLayout({
   const { shouldShowTour, loading: tourLoading, startTour } = useTour();
 
   useEffect(() => {
+    // Load theme from localStorage
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else if (savedTheme === "light") {
+      document.documentElement.classList.remove("dark");
+    } else {
+      // Check system preference
+      const prefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      ).matches;
+      if (prefersDark) {
+        document.documentElement.classList.add("dark");
+      }
+    }
+
     // Get initial session and user role
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setUser(session?.user ?? null);
