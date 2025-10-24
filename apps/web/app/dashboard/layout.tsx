@@ -23,6 +23,7 @@ export default function DashboardLayout({
   const [userRole, setUserRole] = useState<
     "admin" | "staff" | "referrer" | null
   >(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const { shouldShowTour, loading: tourLoading, startTour } = useTour();
@@ -32,7 +33,7 @@ export default function DashboardLayout({
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setUser(session?.user ?? null);
 
-      // Fetch user's role from member table
+      // Fetch user's role from member table and check super admin status
       if (session?.user) {
         const { data: memberData } = await supabase
           .from("member")
@@ -43,6 +44,15 @@ export default function DashboardLayout({
         if (memberData) {
           setUserRole(memberData.role as "admin" | "staff" | "referrer");
         }
+
+        // Check if user is super admin
+        const { data: superAdminData } = await supabase
+          .from("super_admin")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .single();
+
+        setIsSuperAdmin(!!superAdminData);
       }
 
       setLoading(false);
@@ -54,7 +64,7 @@ export default function DashboardLayout({
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
 
-      // Fetch role when session changes
+      // Fetch role and super admin status when session changes
       if (session?.user) {
         const { data: memberData } = await supabase
           .from("member")
@@ -65,8 +75,18 @@ export default function DashboardLayout({
         if (memberData) {
           setUserRole(memberData.role as "admin" | "staff" | "referrer");
         }
+
+        // Check if user is super admin
+        const { data: superAdminData } = await supabase
+          .from("super_admin")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .single();
+
+        setIsSuperAdmin(!!superAdminData);
       } else {
         setUserRole(null);
+        setIsSuperAdmin(false);
       }
     });
 
@@ -183,6 +203,18 @@ export default function DashboardLayout({
                     }
                   >
                     Admin
+                  </Link>
+                )}
+                {isSuperAdmin && (
+                  <Link
+                    href="/dashboard/super-admin"
+                    className={
+                      pathname === "/dashboard/super-admin"
+                        ? "border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                    }
+                  >
+                    Super Admin
                   </Link>
                 )}
               </div>
