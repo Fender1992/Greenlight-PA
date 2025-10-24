@@ -33,6 +33,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showOrgSelector, setShowOrgSelector] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [notifications, setNotifications] = useState<
     Array<{
       id: string;
@@ -274,6 +275,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
                   Greenlight PA
                 </Link>
               </div>
+              {/* Desktop Navigation */}
               <div
                 className="hidden sm:ml-6 sm:flex sm:space-x-8"
                 data-tour="navigation"
@@ -397,12 +399,50 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {/* Mobile menu button */}
+              <button
+                onClick={() => setShowMobileMenu(!showMobileMenu)}
+                className="sm:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+                aria-expanded={showMobileMenu}
+              >
+                <span className="sr-only">Open main menu</span>
+                {!showMobileMenu ? (
+                  <svg
+                    className="block h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6h16M4 12h16M4 18h16"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    className="block h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                )}
+              </button>
+
               {!loading && (
                 <>
                   {user && (
                     <>
-                      {/* Notifications */}
-                      <div className="relative notifications-menu">
+                      {/* Notifications - Desktop only */}
+                      <div className="hidden sm:block relative notifications-menu">
                         <button
                           onClick={() =>
                             setShowNotifications(!showNotifications)
@@ -551,10 +591,10 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
                         )}
                       </div>
 
-                      {/* Organization Selector (for multi-org users and super admins) */}
+                      {/* Organization Selector - Desktop only (for multi-org users and super admins) */}
                       {!orgLoading &&
                         (memberships.length > 1 || isSuperAdminFromContext) && (
-                          <div className="relative org-selector-menu">
+                          <div className="hidden sm:block relative org-selector-menu">
                             <button
                               onClick={() =>
                                 setShowOrgSelector(!showOrgSelector)
@@ -652,8 +692,8 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
                           </div>
                         )}
 
-                      {/* Profile Menu */}
-                      <div className="relative profile-menu">
+                      {/* Profile Menu - Desktop only */}
+                      <div className="hidden sm:block relative profile-menu">
                         <button
                           onClick={() => setShowProfileMenu(!showProfileMenu)}
                           className="flex items-center text-sm text-gray-700 hover:text-gray-900"
@@ -720,10 +760,179 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </div>
+
+        {/* Mobile menu panel */}
+        {showMobileMenu && (
+          <div className="sm:hidden border-t border-gray-200">
+            <div className="pt-2 pb-3 space-y-1">
+              {/* Primary Navigation Links */}
+              <Link
+                href="/dashboard"
+                onClick={() => setShowMobileMenu(false)}
+                className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
+                  pathname === "/dashboard" ||
+                  pathname?.startsWith("/dashboard/pa")
+                    ? "bg-blue-50 border-blue-500 text-blue-700"
+                    : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
+                }`}
+              >
+                Worklist
+              </Link>
+              <Link
+                href="/dashboard/patients"
+                onClick={() => setShowMobileMenu(false)}
+                className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
+                  pathname === "/dashboard/patients"
+                    ? "bg-blue-50 border-blue-500 text-blue-700"
+                    : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
+                }`}
+              >
+                Patients
+              </Link>
+              <Link
+                href="/dashboard/orders"
+                onClick={() => setShowMobileMenu(false)}
+                className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
+                  pathname?.startsWith("/dashboard/orders")
+                    ? "bg-blue-50 border-blue-500 text-blue-700"
+                    : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
+                }`}
+              >
+                Orders
+              </Link>
+              <Link
+                href="/dashboard/metrics"
+                onClick={() => setShowMobileMenu(false)}
+                className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
+                  pathname === "/dashboard/metrics"
+                    ? "bg-blue-50 border-blue-500 text-blue-700"
+                    : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
+                }`}
+              >
+                📊 Metrics
+              </Link>
+              {userRole === "admin" && (
+                <Link
+                  href="/dashboard/admin"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
+                    pathname === "/dashboard/admin"
+                      ? "bg-blue-50 border-blue-500 text-blue-700"
+                      : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
+                  }`}
+                >
+                  ⚙️ Admin
+                </Link>
+              )}
+              {isSuperAdmin && (
+                <Link
+                  href="/dashboard/super-admin"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
+                    pathname === "/dashboard/super-admin"
+                      ? "bg-blue-50 border-blue-500 text-blue-700"
+                      : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
+                  }`}
+                >
+                  👑 Super Admin
+                </Link>
+              )}
+              <Link
+                href="/dashboard/preferences"
+                onClick={() => setShowMobileMenu(false)}
+                className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
+                  pathname === "/dashboard/preferences"
+                    ? "bg-blue-50 border-blue-500 text-blue-700"
+                    : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
+                }`}
+              >
+                🔧 Preferences
+              </Link>
+            </div>
+
+            {/* Mobile org selector for multi-org users */}
+            {!orgLoading &&
+              (memberships.length > 1 || isSuperAdminFromContext) && (
+                <div className="pt-4 pb-3 border-t border-gray-200">
+                  <div className="px-4">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                      Organization
+                      {isSuperAdminFromContext && (
+                        <span className="ml-1">👑</span>
+                      )}
+                    </p>
+                    <div className="space-y-1">
+                      {memberships.map((membership) => (
+                        <button
+                          key={membership.org_id}
+                          onClick={() => {
+                            setSelectedOrgId(membership.org_id);
+                            setShowMobileMenu(false);
+                          }}
+                          className={`block w-full text-left px-3 py-2 rounded-md text-sm ${
+                            selectedOrgId === membership.org_id
+                              ? "bg-blue-50 text-blue-700 font-medium"
+                              : "text-gray-700 hover:bg-gray-50"
+                          }`}
+                        >
+                          <div className="font-medium">
+                            {membership.org.name}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {membership.role === "super_admin"
+                              ? "Super Admin"
+                              : `Role: ${membership.role}`}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            {/* Mobile user menu */}
+            {user && (
+              <div className="pt-4 pb-3 border-t border-gray-200">
+                <div className="flex items-center px-4">
+                  <div>
+                    <div className="text-base font-medium text-gray-800">
+                      {displayName}
+                    </div>
+                    <div className="text-sm font-medium text-gray-500">
+                      {userRole}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 space-y-1">
+                  <button
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      startTour();
+                    }}
+                    className="block w-full text-left px-4 py-2 text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+                  >
+                    Replay Product Tour
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      handleLogout();
+                    }}
+                    className="block w-full text-left px-4 py-2 text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+                  >
+                    Logout
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </nav>
 
       {/* Main content */}
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">{children}</main>
+      <main className="max-w-7xl mx-auto py-4 px-4 sm:py-6 sm:px-6 lg:px-8">
+        {children}
+      </main>
     </div>
   );
 }
