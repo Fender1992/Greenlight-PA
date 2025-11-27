@@ -1,10 +1,125 @@
 # Greenlight PA - Build Status
 
-**Last Updated:** 2025-10-24 (Mobile-Friendly & Multi-Org UX Complete)
+**Last Updated:** 2025-11-27 (Critical Bug Fix Session - 6 Parallel Agents)
 
 ---
 
-## 📱 Latest Changes (2025-10-24 - Mobile & Multi-Org UX)
+## 🔧 Latest Changes (2025-11-27 - Critical Bug Fix Session)
+
+### Overview
+6 parallel agents completed comprehensive fixes for critical gaps identified in application audit.
+
+### Fixes Applied
+
+#### 1. Name Change API - ENABLED
+- **Issue**: API endpoints returned 501 but database table existed with 50+ records
+- **Fix**: Implemented full CRUD endpoints
+  - Admin GET: List name change requests for org
+  - Admin PATCH: Approve/deny requests with reason tracking
+  - User GET: View own requests
+  - User POST: Create new requests with duplicate prevention
+- **Files**: `apps/web/app/api/admin/name-change-requests/route.ts`, `apps/web/app/api/user/name-change-request/route.ts`
+
+#### 2. Auth Cookie Security - FIXED (XSS Vulnerability)
+- **Issue**: `sb-access-token` cookie was set with `httpOnly: false`, exposing tokens to XSS attacks
+- **Root Cause**: Incorrect comment claimed "browser JavaScript must read it" - analysis showed this was false
+- **Fix**: Set `httpOnly: true` on all auth cookies
+- **Files**: `apps/web/app/api/auth/callback/route.ts`, `apps/web/app/api/auth/set-session/route.ts`, `apps/web/app/api/auth/logout/route.ts`
+- **Verification**: Grep confirmed zero client-side cookie reads; all API routes use existing `extractAccessToken()`
+
+#### 3. LLM Integration - DEBUGGED
+- **Issue**: LLM endpoints returning 500 errors
+- **Root Cause**: Outdated model name + missing error logging
+- **Fixes**:
+  - Updated model from `claude-3-5-sonnet-20241022` to `claude-sonnet-4-5-20250929`
+  - Added `CACHEGPT_BASE_URL` environment variable
+  - Implemented comprehensive request/response logging
+- **Files**: `packages/llm/client.ts`, `.env.example`
+
+#### 4. Member Table Audit Field - MIGRATION CREATED
+- **Issue**: `member` table missing `updated_at` column
+- **Fix**: Created migration `20251127_add_member_updated_at.sql` with:
+  - Idempotent column addition
+  - Automatic trigger for timestamp updates
+  - Backfill existing records
+- **Status**: Ready to apply to production
+
+#### 5. TypeScript Types - VERIFIED
+- **Issue**: Types potentially out of sync with database
+- **Finding**: Types are already up to date with all tables (super_admin, notification, name_change_request) and columns
+- **Status**: No changes needed
+
+#### 6. Duplicate Migrations - DOCUMENTED
+- **Issue**: Multiple migrations with same 20251024 prefix causing confusion
+- **Fix**: Created `MIGRATION_NOTES.md` documenting:
+  - Which migrations were applied
+  - Which are duplicates/failed attempts
+  - Recommended archival actions
+- **Files**: `packages/db/migrations/MIGRATION_NOTES.md`
+
+### Manual Actions Required
+
+1. **Apply Migration** (Required):
+   ```sql
+   -- Run in Supabase SQL Editor:
+   -- Copy contents of packages/db/migrations/20251127_add_member_updated_at.sql
+   ```
+
+2. **Archive Duplicate Migrations** (Optional):
+   ```bash
+   mkdir -p packages/db/migrations/archive
+   mv packages/db/migrations/20251024_add_member_status.sql archive/
+   mv packages/db/migrations/20251024_add_member_status_cascade.sql archive/
+   mv packages/db/migrations/20251024_add_user_profile_fields.sql archive/
+   ```
+
+3. **Deploy to Vercel** - Push changes to activate fixes
+
+### Documentation Created
+- `AGENT_WORK_LOG.md` - Detailed fix session log with timestamps
+- `MIGRATION_INSTRUCTIONS_20251127.md` - Step-by-step migration guide
+- `packages/db/migrations/MIGRATION_NOTES.md` - Migration cleanup recommendations
+
+---
+
+## 🗃️ Previous Changes (2025-11-27 - Database Migration)
+
+### Member Table Audit Field Fix
+
+- **Created Migration:** `packages/db/migrations/20251127_add_member_updated_at.sql`
+  - Adds missing `updated_at TIMESTAMPTZ` column to member table
+  - Includes automatic trigger to update timestamp on row modifications
+  - Idempotent design with `IF NOT EXISTS` checks
+  - Backfills existing records with `created_at` value before setting NOT NULL constraint
+  - Function: `update_member_updated_at()` - automatically sets timestamp on UPDATE
+  - Trigger: `member_updated_at` - calls function before each row update
+
+### Migration Details
+
+- **File:** `/root/greenlight-pa/packages/db/migrations/20251127_add_member_updated_at.sql`
+- **Pattern:** Based on existing `name_change_request` table trigger implementation
+- **Status:** Ready to apply to production Supabase database
+- **Safety:** Idempotent - safe to run multiple times
+
+### Manual Action Required
+
+**Apply this migration to production:**
+
+```sql
+-- Run this SQL in Supabase SQL Editor:
+-- Copy and paste contents of /root/greenlight-pa/packages/db/migrations/20251127_add_member_updated_at.sql
+```
+
+The migration will:
+1. Add `updated_at` column with default NOW()
+2. Backfill existing rows with created_at timestamp
+3. Set NOT NULL constraint after backfill
+4. Create trigger function for automatic updates
+5. Create trigger on member table
+
+---
+
+## 📱 Previous Changes (2025-10-24 - Mobile & Multi-Org UX)
 
 ### Mobile-Friendly Application Complete
 

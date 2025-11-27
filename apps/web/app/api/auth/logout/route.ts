@@ -23,7 +23,14 @@ export async function POST(_request: Request) {
       );
     }
 
-    return NextResponse.json({ success: true });
+    // Create response and clear session cookies
+    const response = NextResponse.json({ success: true });
+
+    // Clear both access and refresh tokens
+    response.cookies.delete("sb-access-token");
+    response.cookies.delete("sb-refresh-token");
+
+    return response;
   } catch (error) {
     console.error("[Auth] Logout error:", error);
     return NextResponse.json(

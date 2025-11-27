@@ -19,23 +19,20 @@ export async function POST(request: NextRequest) {
 
     const response = NextResponse.json({ success: true });
 
-    // Cookie options
+    // Cookie options - httpOnly for security to prevent XSS attacks
     const cookieOptions = {
       path: "/",
       maxAge: 60 * 60 * 24 * 7, // 7 days
       sameSite: "lax" as const,
-      httpOnly: false, // Must be false so browser JavaScript can read it
+      httpOnly: true, // Security: Prevents JavaScript from accessing the token
       secure: process.env.NODE_ENV === "production",
     };
 
-    // Set the access token cookie
+    // Set the access token cookie (httpOnly for security)
     response.cookies.set("sb-access-token", accessToken, cookieOptions);
 
-    // Set the refresh token cookie (httpOnly for security)
-    response.cookies.set("sb-refresh-token", refreshToken, {
-      ...cookieOptions,
-      httpOnly: true,
-    });
+    // Set the refresh token cookie (also httpOnly for security)
+    response.cookies.set("sb-refresh-token", refreshToken, cookieOptions);
 
     return response;
   } catch (error) {
