@@ -10,56 +10,49 @@ import type {
   PayerRow,
   OrderRow,
 } from "@web/types/api";
+import { useOrg } from "../../OrgContext";
 
 type OrderCreateResponse = ApiResponse<OrderRow>;
 
 export default function OrderCreatePage() {
   const router = useRouter();
+  const { selectedOrgId, memberships, loading: orgLoading } = useOrg();
 
   const patientsQuery = useQuery({
-    queryKey: ["patients"],
+    queryKey: ["patients", selectedOrgId],
     queryFn: async () => {
-      console.log("[Order Form] Fetching patients...");
-      const response = await apiGet<ApiResponse<PatientRow[]>>("/api/patients");
-      console.log("[Order Form] Patients response:", response);
+      const url = selectedOrgId
+        ? `/api/patients?org_id=${selectedOrgId}`
+        : "/api/patients";
+      const response = await apiGet<ApiResponse<PatientRow[]>>(url);
       return response;
     },
-    select: (response) => {
-      const patients = response.data ?? [];
-      console.log("[Order Form] Selected patients:", patients);
-      return patients;
-    },
+    select: (response) => response.data ?? [],
+    enabled:
+      !orgLoading && (memberships.length === 1 || selectedOrgId !== null),
   });
 
   const providersQuery = useQuery({
-    queryKey: ["providers"],
+    queryKey: ["providers", selectedOrgId],
     queryFn: async () => {
-      console.log("[Order Form] Fetching providers...");
-      const response =
-        await apiGet<ApiResponse<ProviderRow[]>>("/api/providers");
-      console.log("[Order Form] Providers response:", response);
+      const url = selectedOrgId
+        ? `/api/providers?org_id=${selectedOrgId}`
+        : "/api/providers";
+      const response = await apiGet<ApiResponse<ProviderRow[]>>(url);
       return response;
     },
-    select: (response) => {
-      const providers = response.data ?? [];
-      console.log("[Order Form] Selected providers:", providers);
-      return providers;
-    },
+    select: (response) => response.data ?? [],
+    enabled:
+      !orgLoading && (memberships.length === 1 || selectedOrgId !== null),
   });
 
   const payersQuery = useQuery({
     queryKey: ["payers"],
     queryFn: async () => {
-      console.log("[Order Form] Fetching payers...");
       const response = await apiGet<ApiResponse<PayerRow[]>>("/api/payers");
-      console.log("[Order Form] Payers response:", response);
       return response;
     },
-    select: (response) => {
-      const payers = response.data ?? [];
-      console.log("[Order Form] Selected payers:", payers);
-      return payers;
-    },
+    select: (response) => response.data ?? [],
   });
 
   const [modality, setModality] = useState("");
@@ -86,6 +79,7 @@ export default function OrderCreatePage() {
           .map((code) => code.trim())
           .filter(Boolean),
         clinic_notes_text: notes || null,
+        ...(selectedOrgId && { org_id: selectedOrgId }),
       };
 
       if (!payload.patient_id || !payload.provider_id || !payload.modality) {
@@ -123,23 +117,15 @@ export default function OrderCreatePage() {
     },
   });
 
+  // Show org selection prompt for multi-org users
+  const needsOrgSelection =
+    !orgLoading && memberships.length > 1 && !selectedOrgId;
+
   const loading =
+    orgLoading ||
     patientsQuery.isLoading ||
     providersQuery.isLoading ||
     payersQuery.isLoading;
-
-  // Debug logging
-  console.log("[Order Form] Query states:", {
-    patientsLoading: patientsQuery.isLoading,
-    patientsError: patientsQuery.isError,
-    patientsCount: patientsQuery.data?.length ?? 0,
-    providersLoading: providersQuery.isLoading,
-    providersError: providersQuery.isError,
-    providersCount: providersQuery.data?.length ?? 0,
-    payersLoading: payersQuery.isLoading,
-    payersError: payersQuery.isError,
-    payersCount: payersQuery.data?.length ?? 0,
-  });
 
   return (
     <div className="px-4 sm:px-0">
@@ -151,7 +137,32 @@ export default function OrderCreatePage() {
           </p>
         </div>
 
-        {loading ? (
+        {needsOrgSelection ? (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <div className="flex items-start">
+              <svg
+                className="h-5 w-5 text-blue-400 mt-0.5"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-blue-800">
+                  Select an Organization
+                </h3>
+                <p className="mt-1 text-sm text-blue-700">
+                  You have access to multiple organizations. Please select one
+                  from the header dropdown to create an order.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : loading ? (
           <div className="text-sm text-gray-500">Loading reference data…</div>
         ) : (
           <form

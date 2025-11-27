@@ -9,12 +9,14 @@ import type {
   PayerRow,
   PaRequestRow,
 } from "@web/types/api";
+import { useOrg } from "../../OrgContext";
 
 type PaCreateResponse = ApiResponse<PaRequestRow>;
 
 function PaCreateForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { selectedOrgId, memberships, loading: orgLoading } = useOrg();
   const preselectedOrderId = searchParams?.get("order_id") ?? "";
 
   const [orderId, setOrderId] = useState(preselectedOrderId);
@@ -29,24 +31,25 @@ function PaCreateForm() {
   }, [preselectedOrderId]);
 
   const ordersQuery = useQuery({
-    queryKey: ["orders"],
-    queryFn: () => apiGet<ApiResponse<OrderWithRelations[]>>("/api/orders"),
+    queryKey: ["orders", selectedOrgId],
+    queryFn: () => {
+      const url = selectedOrgId
+        ? `/api/orders?org_id=${selectedOrgId}`
+        : "/api/orders";
+      return apiGet<ApiResponse<OrderWithRelations[]>>(url);
+    },
     select: (response) => response.data ?? [],
+    enabled:
+      !orgLoading && (memberships.length === 1 || selectedOrgId !== null),
   });
 
   const payersQuery = useQuery({
     queryKey: ["payers"],
     queryFn: async () => {
-      console.log("[PA Form] Fetching payers...");
       const response = await apiGet<ApiResponse<PayerRow[]>>("/api/payers");
-      console.log("[PA Form] Payers response:", response);
       return response;
     },
-    select: (response) => {
-      const payers = response.data ?? [];
-      console.log("[PA Form] Selected payers:", payers);
-      return payers;
-    },
+    select: (response) => response.data ?? [],
   });
 
   const createMutation = useMutation({
@@ -87,21 +90,16 @@ function PaCreateForm() {
   const orders = ordersQuery.data ?? [];
   const payers = payersQuery.data ?? [];
 
-  // Debug logging
-  console.log("[PA Form] Query states:", {
-    ordersLoading: ordersQuery.isLoading,
-    ordersError: ordersQuery.isError,
-    ordersCount: orders.length,
-    payersLoading: payersQuery.isLoading,
-    payersError: payersQuery.isError,
-    payersCount: payers.length,
-  });
-
   const selectedOrder = useMemo(() => {
     return orders.find((order) => order.id === orderId) ?? null;
   }, [orders, orderId]);
 
-  const isLoading = ordersQuery.isLoading || payersQuery.isLoading;
+  // Show org selection prompt for multi-org users
+  const needsOrgSelection =
+    !orgLoading && memberships.length > 1 && !selectedOrgId;
+
+  const isLoading =
+    orgLoading || ordersQuery.isLoading || payersQuery.isLoading;
   const hasLoadError = ordersQuery.isError || payersQuery.isError;
   const loadErrorMessage =
     (ordersQuery.error as Error | undefined)?.message ||
@@ -130,7 +128,32 @@ function PaCreateForm() {
           </p>
         </div>
 
-        {hasLoadError ? (
+        {needsOrgSelection ? (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <div className="flex items-start">
+              <svg
+                className="h-5 w-5 text-blue-400 mt-0.5"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-blue-800">
+                  Select an Organization
+                </h3>
+                <p className="mt-1 text-sm text-blue-700">
+                  You have access to multiple organizations. Please select one
+                  from the header dropdown to create a PA request.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : hasLoadError ? (
           <div className="text-sm text-red-600">
             {loadErrorMessage}
             <div className="mt-2">
