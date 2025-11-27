@@ -270,7 +270,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       <nav className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
-            <div className="flex">
+            <div className="flex h-full">
               <div className="flex-shrink-0 flex items-center">
                 <Link
                   href="/dashboard"
@@ -281,54 +281,54 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
               </div>
               {/* Desktop Navigation */}
               <div
-                className="hidden sm:ml-6 sm:flex sm:space-x-8"
+                className="hidden sm:ml-6 sm:flex sm:space-x-8 h-full"
                 data-tour="navigation"
               >
                 {/* Primary Navigation Links */}
                 <Link
                   href="/dashboard"
-                  className={
+                  className={`inline-flex items-center px-1 border-b-2 text-sm font-medium ${
                     pathname === "/dashboard" ||
                     pathname?.startsWith("/dashboard/pa")
-                      ? "border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                  }
+                      ? "border-blue-500 text-gray-900"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
                 >
                   Worklist
                 </Link>
                 <Link
                   href="/dashboard/patients"
-                  className={
+                  className={`inline-flex items-center px-1 border-b-2 text-sm font-medium ${
                     pathname === "/dashboard/patients"
-                      ? "border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                  }
+                      ? "border-blue-500 text-gray-900"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
                 >
                   Patients
                 </Link>
                 <Link
                   href="/dashboard/orders"
-                  className={
+                  className={`inline-flex items-center px-1 border-b-2 text-sm font-medium ${
                     pathname?.startsWith("/dashboard/orders")
-                      ? "border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                  }
+                      ? "border-blue-500 text-gray-900"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
                 >
                   Orders
                 </Link>
 
                 {/* More Dropdown Menu */}
-                <div className="relative more-menu">
+                <div className="relative more-menu flex">
                   <button
                     onClick={() => setShowMoreMenu(!showMoreMenu)}
-                    className={
+                    className={`inline-flex items-center px-1 border-b-2 text-sm font-medium gap-1 ${
                       pathname === "/dashboard/metrics" ||
                       pathname === "/dashboard/admin" ||
                       pathname === "/dashboard/super-admin" ||
                       pathname === "/dashboard/preferences"
-                        ? "border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium gap-1"
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium gap-1"
-                    }
+                        ? "border-blue-500 text-gray-900"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    }`}
                   >
                     More
                     <svg
