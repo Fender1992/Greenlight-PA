@@ -181,7 +181,7 @@ export default function OrderCreatePage() {
                 <select
                   value={patientId}
                   onChange={(event) => setPatientId(event.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                   required
                 >
                   <option value="">Select patient</option>
@@ -200,7 +200,7 @@ export default function OrderCreatePage() {
                 <select
                   value={providerId}
                   onChange={(event) => setProviderId(event.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                   required
                 >
                   <option value="">Select provider</option>
@@ -221,7 +221,7 @@ export default function OrderCreatePage() {
                 <input
                   value={modality}
                   onChange={(event) => setModality(event.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                   placeholder="e.g. MRI Brain"
                   required
                 />
@@ -234,7 +234,7 @@ export default function OrderCreatePage() {
                 <select
                   value={payerId}
                   onChange={(event) => setPayerId(event.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                 >
                   <option value="">No – create order only</option>
                   {payersQuery.data?.map((payer) => (
@@ -254,7 +254,7 @@ export default function OrderCreatePage() {
                 <input
                   value={cptCodes}
                   onChange={(event) => setCptCodes(event.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                   placeholder="70553"
                 />
               </div>
@@ -266,7 +266,7 @@ export default function OrderCreatePage() {
                 <input
                   value={icd10Codes}
                   onChange={(event) => setIcd10Codes(event.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                   placeholder="G89.29, R51"
                 />
               </div>
@@ -279,7 +279,7 @@ export default function OrderCreatePage() {
               <textarea
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                 rows={4}
                 placeholder="Include key clinical information…"
               />
