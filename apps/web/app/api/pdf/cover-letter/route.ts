@@ -4,9 +4,10 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser, supabase } from "@greenlight/db";
+import { supabaseAdmin } from "@greenlight/db";
 import { generateCoverLetter, type CoverLetterData } from "@greenlight/pdfkit";
 import type { Database } from "@greenlight/db";
+import { requireUser, HttpError } from "../../_lib/org";
 
 type Tables = Database["public"]["Tables"];
 type PaRequestRow = Tables["pa_request"]["Row"];
@@ -30,13 +31,7 @@ type AttachmentRow = Tables["attachment"]["Row"];
  */
 export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    await requireUser(request);
 
     const body = await request.json();
     const { pa_request_id } = body;
@@ -48,7 +43,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: paRequest, error: paError } = await supabase
+    const { data: paRequest, error: paError } = await supabaseAdmin
       .from("pa_request")
       .select("*")
       .eq("id", pa_request_id)
@@ -71,17 +66,21 @@ export async function POST(request: NextRequest) {
     }
 
     const [orderResult, payerResult, orgResult] = await Promise.all([
-      supabase
+      supabaseAdmin
         .from("order")
         .select("*")
         .eq("id", paRequestRow.order_id)
         .single(),
-      supabase
+      supabaseAdmin
         .from("payer")
         .select("*")
         .eq("id", paRequestRow.payer_id)
         .single(),
-      supabase.from("org").select("*").eq("id", paRequestRow.org_id).single(),
+      supabaseAdmin
+        .from("org")
+        .select("*")
+        .eq("id", paRequestRow.org_id)
+        .single(),
     ]);
 
     const order = orderResult.data as OrderRow | null;
@@ -92,14 +91,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const patientResult = await supabase
+    const patientResult = await supabaseAdmin
       .from("patient")
       .select("*")
       .eq("id", order.patient_id)
       .single();
 
     const providerResult = order.provider_id
-      ? await supabase
+      ? await supabaseAdmin
           .from("provider")
           .select("*")
           .eq("id", order.provider_id)
@@ -132,7 +131,7 @@ export async function POST(request: NextRequest) {
 
     const provider = (providerResult?.data as ProviderRow | null) ?? null;
 
-    const { data: attachments } = await supabase
+    const { data: attachments } = await supabaseAdmin
       .from("attachment")
       .select("id, type, storage_path")
       .eq("org_id", paRequestRow.org_id);
@@ -206,6 +205,13 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    if (error instanceof HttpError) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: error.status }
+      );
+    }
+
     console.error("Cover letter PDF generation error:", error);
     return NextResponse.json(
       {
