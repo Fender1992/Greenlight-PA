@@ -294,7 +294,7 @@ export default function PADetailPage() {
                   setPriority(newPriority);
                   updatePriorityMutation.mutate(newPriority);
                 }}
-                className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-blue-500"
+                className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-blue-500 bg-white text-gray-900"
               >
                 <option value="standard">Standard</option>
                 <option value="urgent">Urgent</option>
