@@ -101,6 +101,7 @@ export default function OrderCreatePage() {
           await apiPost<ApiResponse<unknown>>("/api/pa-requests", {
             order_id: order.id,
             payer_id: payerId,
+            ...(selectedOrgId && { org_id: selectedOrgId }),
           });
         } catch (submissionError) {
           console.warn("Order created without PA request", submissionError);

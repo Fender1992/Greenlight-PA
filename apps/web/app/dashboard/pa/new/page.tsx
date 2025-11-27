@@ -58,6 +58,7 @@ function PaCreateForm() {
         order_id: orderId,
         payer_id: payerId,
         priority,
+        ...(selectedOrgId && { org_id: selectedOrgId }),
       };
 
       if (!payload.order_id || !payload.payer_id) {
