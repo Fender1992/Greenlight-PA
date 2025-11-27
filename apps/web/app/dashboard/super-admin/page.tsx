@@ -507,7 +507,7 @@ export default function SuperAdminPage() {
                   placeholder="Search organizations..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 max-w-md px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                  className="flex-1 max-w-md px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 bg-white text-gray-900"
                 />
                 <button
                   onClick={() => setShowCreateOrgForm(!showCreateOrgForm)}
@@ -539,7 +539,7 @@ export default function SuperAdminPage() {
                       onChange={(e) => setNewOrgName(e.target.value)}
                       required
                       placeholder="Enter organization name"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 bg-white text-gray-900"
                     />
                   </div>
                   <div>
@@ -555,7 +555,7 @@ export default function SuperAdminPage() {
                       value={newOrgDomain}
                       onChange={(e) => setNewOrgDomain(e.target.value)}
                       placeholder="example.com"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 bg-white text-gray-900"
                     />
                   </div>
                   <div className="flex gap-3">
@@ -663,7 +663,7 @@ export default function SuperAdminPage() {
                   placeholder="Search users..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                  className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 bg-white text-gray-900"
                 />
               </div>
 
@@ -718,7 +718,7 @@ export default function SuperAdminPage() {
                                 handleChangeUserRole(user, e.target.value)
                               }
                               disabled={updateUserMutation.isPending}
-                              className="text-xs px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                              className="text-xs px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500 bg-white text-gray-900"
                             >
                               <option value="admin">Admin</option>
                               <option value="staff">Staff</option>

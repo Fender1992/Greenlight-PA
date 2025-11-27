@@ -193,7 +193,7 @@ export default function AdminPage() {
                   placeholder="Search payers..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full sm:max-w-sm px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full sm:max-w-sm px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                 />
                 <button
                   onClick={() => setShowPayerForm((prev) => !prev)}
@@ -216,7 +216,7 @@ export default function AdminPage() {
                       <input
                         name="name"
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                       />
                     </div>
                     <div>
@@ -226,7 +226,7 @@ export default function AdminPage() {
                       <input
                         name="portal_url"
                         placeholder="https://..."
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                       />
                     </div>
                     <div>
@@ -235,7 +235,7 @@ export default function AdminPage() {
                       </label>
                       <input
                         name="contact"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                       />
                     </div>
                   </div>
@@ -318,7 +318,7 @@ export default function AdminPage() {
                       <input
                         name="name"
                         defaultValue={orgQuery.data.name}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                       />
                     </div>
                     <div>
@@ -328,7 +328,7 @@ export default function AdminPage() {
                       <input
                         name="npi"
                         defaultValue={orgQuery.data.npi ?? ""}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                       />
                     </div>
                     <div className="sm:col-span-2">
@@ -338,7 +338,7 @@ export default function AdminPage() {
                       <input
                         name="address"
                         defaultValue={orgQuery.data.address ?? ""}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
                       />
                     </div>
                   </div>
