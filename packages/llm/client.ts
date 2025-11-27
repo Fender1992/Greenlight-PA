@@ -6,7 +6,8 @@
 /**
  * CacheGPT Configuration
  */
-const CACHEGPT_BASE_URL = process.env.CACHEGPT_BASE_URL || "https://cachegpt.app/api/v1";
+const CACHEGPT_BASE_URL =
+  process.env.CACHEGPT_BASE_URL || "https://cachegpt.app/api/v1";
 const CACHEGPT_API_KEY = process.env.CACHEGPT_API_KEY || "";
 
 /**
@@ -61,7 +62,9 @@ export async function callCacheGPT(params: {
 }): Promise<LLMResponse<string>> {
   try {
     if (!CACHEGPT_API_KEY) {
-      console.error("[CACHEGPT-CLIENT] CACHEGPT_API_KEY not configured in environment");
+      console.error(
+        "[CACHEGPT-CLIENT] CACHEGPT_API_KEY not configured in environment"
+      );
       return {
         success: false,
         data: null,
@@ -69,9 +72,18 @@ export async function callCacheGPT(params: {
       };
     }
 
-    console.log("[CACHEGPT-CLIENT] Making request to:", `${CACHEGPT_BASE_URL}/messages`);
-    console.log("[CACHEGPT-CLIENT] Using model:", params.model || DEFAULT_MODEL);
-    console.log("[CACHEGPT-CLIENT] API key configured:", CACHEGPT_API_KEY.substring(0, 10) + "...");
+    console.log(
+      "[CACHEGPT-CLIENT] Making request to:",
+      `${CACHEGPT_BASE_URL}/messages`
+    );
+    console.log(
+      "[CACHEGPT-CLIENT] Using model:",
+      params.model || DEFAULT_MODEL
+    );
+    console.log(
+      "[CACHEGPT-CLIENT] API key configured:",
+      CACHEGPT_API_KEY.substring(0, 10) + "..."
+    );
 
     const response = await fetch(`${CACHEGPT_BASE_URL}/messages`, {
       method: "POST",
@@ -96,7 +108,9 @@ export async function callCacheGPT(params: {
         statusText: response.statusText,
         url: `${CACHEGPT_BASE_URL}/messages`,
         headers: {
-          "x-api-key": CACHEGPT_API_KEY ? `${CACHEGPT_API_KEY.substring(0, 10)}...` : "MISSING",
+          "x-api-key": CACHEGPT_API_KEY
+            ? `${CACHEGPT_API_KEY.substring(0, 10)}...`
+            : "MISSING",
           "anthropic-version": "2023-06-01",
         },
         body: {
@@ -131,7 +145,10 @@ export async function callCacheGPT(params: {
       };
     }
 
-    console.log("[CACHEGPT-CLIENT] Success! Generated text length:", content.text.length);
+    console.log(
+      "[CACHEGPT-CLIENT] Success! Generated text length:",
+      content.text.length
+    );
     return {
       success: true,
       data: content.text,
@@ -144,7 +161,10 @@ export async function callCacheGPT(params: {
     };
   } catch (error) {
     console.error("[CACHEGPT-CLIENT] Unexpected error:", error);
-    console.error("[CACHEGPT-CLIENT] Error stack:", error instanceof Error ? error.stack : "N/A");
+    console.error(
+      "[CACHEGPT-CLIENT] Error stack:",
+      error instanceof Error ? error.stack : "N/A"
+    );
     return {
       success: false,
       data: null,

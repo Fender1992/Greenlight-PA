@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@greenlight/db";
 import { HttpError, requireOrgAdmin } from "../../_lib/org";
+import { sendEmailNotification } from "@greenlight/email";
 
 /**
  * GET /api/admin/name-change-requests
@@ -101,7 +102,10 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (action === "deny" && !denialReason) {
-      throw new HttpError(400, "Denial reason is required when denying a request");
+      throw new HttpError(
+        400,
+        "Denial reason is required when denying a request"
+      );
     }
 
     // Verify the request belongs to this org and is pending
@@ -136,8 +140,54 @@ export async function PATCH(request: NextRequest) {
         throw new HttpError(500, error.message);
       }
 
-      // TODO: Update member record with new name
-      // TODO: Send approval notification
+      // Update member record with new name
+      const { error: memberUpdateError } = await supabaseAdmin
+        .from("member")
+        .update({
+          first_name: nameChangeRequest.requested_first_name,
+          last_name: nameChangeRequest.requested_last_name,
+        })
+        .eq("id", nameChangeRequest.member_id);
+
+      if (memberUpdateError) {
+        console.error("Failed to update member name:", memberUpdateError);
+      }
+
+      // Get member user details and org for notification
+      const { data: memberData } = await supabaseAdmin
+        .from("member")
+        .select("user_id")
+        .eq("id", nameChangeRequest.member_id)
+        .single();
+
+      const { data: orgData } = await supabaseAdmin
+        .from("org")
+        .select("name")
+        .eq("id", orgId)
+        .single();
+
+      // Send approval email notification (non-blocking)
+      if (memberData && orgData) {
+        const { data: userData } = await supabaseAdmin.auth.admin.getUserById(
+          memberData.user_id
+        );
+
+        if (userData.user?.email) {
+          sendEmailNotification({
+            to: userData.user.email,
+            type: "name_change_approved",
+            data: {
+              orgName: orgData.name,
+              newFirstName: nameChangeRequest.requested_first_name,
+              newLastName: nameChangeRequest.requested_last_name,
+              appUrl:
+                process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+            },
+          }).catch((err) => {
+            console.error("Failed to send name change approval email:", err);
+          });
+        }
+      }
 
       return NextResponse.json({
         success: true,
@@ -164,7 +214,40 @@ export async function PATCH(request: NextRequest) {
         throw new HttpError(500, error.message);
       }
 
-      // TODO: Send denial notification
+      // Get member user details and org for notification
+      const { data: memberData } = await supabaseAdmin
+        .from("member")
+        .select("user_id")
+        .eq("id", nameChangeRequest.member_id)
+        .single();
+
+      const { data: orgData } = await supabaseAdmin
+        .from("org")
+        .select("name")
+        .eq("id", orgId)
+        .single();
+
+      // Send denial email notification (non-blocking)
+      if (memberData && orgData) {
+        const { data: userData } = await supabaseAdmin.auth.admin.getUserById(
+          memberData.user_id
+        );
+
+        if (userData.user?.email) {
+          sendEmailNotification({
+            to: userData.user.email,
+            type: "name_change_denied",
+            data: {
+              orgName: orgData.name,
+              denialReason: denialReason || "No reason provided",
+              appUrl:
+                process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+            },
+          }).catch((err) => {
+            console.error("Failed to send name change denial email:", err);
+          });
+        }
+      }
 
       return NextResponse.json({
         success: true,

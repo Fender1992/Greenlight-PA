@@ -8,6 +8,7 @@
 ## Current Database State (Member Table)
 
 Based on production database inspection, the `member` table has the following columns:
+
 - `id`, `org_id`, `user_id`, `role`, `created_at` (from initial schema)
 - `has_seen_tour` (from tour flag migration)
 - `first_name`, `last_name`, `phone_number`, `address` (from profile fields migration)
@@ -19,18 +20,21 @@ Based on production database inspection, the `member` table has the following co
 ## Migration Files Analysis
 
 ### 1. Tour Flag Migrations (No Issues)
+
 - `20251020_add_tour_flag.sql` - **APPLIED**: Adds `has_seen_tour` column
 - `20251020000002_backfill_tour_status.sql` - **APPLIED**: Backfills tour status
 
 ### 2. Profile Fields Migrations (DUPLICATES - Both Functionally Identical)
 
 #### `20251024_add_member_profile_fields.sql`
+
 - **Size**: 1,117 bytes
 - **Adds**: `first_name`, `last_name`, `phone_number`, `address`
 - **Features**: Includes index on names, detailed comments
 - **Status**: **LIKELY APPLIED** (fields exist in production)
 
 #### `20251024_add_user_profile_fields.sql`
+
 - **Size**: 637 bytes
 - **Adds**: Same 4 fields (`first_name`, `last_name`, `phone_number`, `address`)
 - **Features**: Basic comments only, no index
@@ -46,6 +50,7 @@ Based on production database inspection, the `member` table has the following co
 ### 3. Status Migrations (CRITICAL DUPLICATES - Different Approaches)
 
 #### `20251024_add_member_status.sql`
+
 - **Size**: 4,286 bytes
 - **Approach**: Adds status column, updates RLS policies by dropping and recreating them
 - **Issues**:
@@ -55,6 +60,7 @@ Based on production database inspection, the `member` table has the following co
 - **Status**: **NOT APPLIED** (would have failed with dependency errors)
 
 #### `20251024_add_member_status_cascade.sql`
+
 - **Size**: 11,025 bytes
 - **Approach**: Adds status column, uses `DROP FUNCTION ... CASCADE` to drop all dependent policies
 - **Features**:
@@ -67,6 +73,7 @@ Based on production database inspection, the `member` table has the following co
   - Massive scope - recreates 40+ policies
 
 #### `20251024_add_member_status_fixed.sql`
+
 - **Size**: 4,431 bytes
 - **Approach**: Adds status column, drops functions WITHOUT cascade, then recreates policies
 - **Features**:
@@ -77,11 +84,13 @@ Based on production database inspection, the `member` table has the following co
 - **Status**: **LIKELY APPLIED** (status column exists in production)
 
 **Analysis**:
+
 1. The first version (`add_member_status.sql`) likely failed due to dependency issues
 2. The cascade version (`add_member_status_cascade.sql`) was likely an attempt to fix it with CASCADE
 3. The fixed version (`add_member_status_fixed.sql`) appears to be the final working version
 
 **Evidence that `_fixed` was applied**:
+
 - The `status` column exists in production
 - The `_fixed` version is the most pragmatic approach
 - It explicitly handles the policy recreation issue from the first version
@@ -91,6 +100,7 @@ Based on production database inspection, the `member` table has the following co
 ---
 
 ### 4. Name Change Migration (No Issues)
+
 - `20251024_add_name_change_and_notifications.sql`
 - **Status**: **APPLIED** (creates new tables, references member.status in RLS policies)
 - **Note**: This migration depends on the status column existing, which confirms status migration ran first
@@ -100,11 +110,13 @@ Based on production database inspection, the `member` table has the following co
 ## Summary of Duplicates
 
 ### Confirmed Duplicates to Delete:
+
 1. **`20251024_add_user_profile_fields.sql`** - Duplicate of `add_member_profile_fields.sql`
 2. **`20251024_add_member_status.sql`** - Failed version, superseded by `_fixed`
 3. **`20251024_add_member_status_cascade.sql`** - Overly aggressive version, superseded by `_fixed`
 
 ### Files to Keep:
+
 1. **`20251024_add_member_profile_fields.sql`** - Successfully applied, has index
 2. **`20251024_add_member_status_fixed.sql`** - Successfully applied, final working version
 
@@ -113,7 +125,9 @@ Based on production database inspection, the `member` table has the following co
 ## Recommended Cleanup Actions
 
 ### Step 1: Archive (Don't Delete) Failed Migrations
+
 Create an `archive/` subdirectory and move failed attempts there:
+
 ```bash
 mkdir -p /root/greenlight-pa/packages/db/migrations/archive
 mv /root/greenlight-pa/packages/db/migrations/20251024_add_member_status.sql archive/
@@ -122,9 +136,11 @@ mv /root/greenlight-pa/packages/db/migrations/20251024_add_user_profile_fields.s
 ```
 
 ### Step 2: Add Archive README
+
 Document why these were archived in `archive/README.md`
 
 ### Step 3: Update Migration Tracker (if exists)
+
 If there's a migration tracking table or system, ensure only the `_fixed` versions are marked as applied.
 
 ---
@@ -160,6 +176,7 @@ Based on the analysis, these migrations were likely applied in this order:
 ## Risk Assessment
 
 **LOW RISK** to delete the identified duplicates because:
+
 1. They were never successfully applied (failed or superseded)
 2. The working versions are already in production
 3. Both profile field migrations use `IF NOT EXISTS` (idempotent)

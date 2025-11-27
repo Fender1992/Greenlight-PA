@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@greenlight/db";
 import { HttpError, requireOrgAdmin } from "../../_lib/org";
+import { sendEmailNotification } from "@greenlight/email";
 
 /**
  * GET /api/admin/pending-members
@@ -145,7 +146,30 @@ export async function PATCH(request: NextRequest) {
         throw new HttpError(500, error.message);
       }
 
-      // TODO: Send approval email notification
+      // Get user email and org details for notification
+      const { data: userData } = await supabaseAdmin.auth.admin.getUserById(
+        member.user_id
+      );
+      const { data: orgData } = await supabaseAdmin
+        .from("org")
+        .select("name")
+        .eq("id", orgId)
+        .single();
+
+      // Send approval email notification (non-blocking)
+      if (userData.user?.email && orgData) {
+        sendEmailNotification({
+          to: userData.user.email,
+          type: "member_approved",
+          data: {
+            orgName: orgData.name,
+            role: role || member.role,
+            appUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+          },
+        }).catch((err) => {
+          console.error("Failed to send approval email:", err);
+        });
+      }
 
       return NextResponse.json({
         success: true,
@@ -163,7 +187,28 @@ export async function PATCH(request: NextRequest) {
         throw new HttpError(500, error.message);
       }
 
-      // TODO: Send rejection email notification
+      // Get user email and org details for notification
+      const { data: userData } = await supabaseAdmin.auth.admin.getUserById(
+        member.user_id
+      );
+      const { data: orgData } = await supabaseAdmin
+        .from("org")
+        .select("name")
+        .eq("id", orgId)
+        .single();
+
+      // Send rejection email notification (non-blocking)
+      if (userData.user?.email && orgData) {
+        sendEmailNotification({
+          to: userData.user.email,
+          type: "member_rejected",
+          data: {
+            orgName: orgData.name,
+          },
+        }).catch((err) => {
+          console.error("Failed to send rejection email:", err);
+        });
+      }
 
       return NextResponse.json({
         success: true,

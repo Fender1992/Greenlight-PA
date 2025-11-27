@@ -7,11 +7,13 @@
 ## 🔧 Latest Changes (2025-11-27 - Critical Bug Fix Session)
 
 ### Overview
+
 6 parallel agents completed comprehensive fixes for critical gaps identified in application audit.
 
 ### Fixes Applied
 
 #### 1. Name Change API - ENABLED
+
 - **Issue**: API endpoints returned 501 but database table existed with 50+ records
 - **Fix**: Implemented full CRUD endpoints
   - Admin GET: List name change requests for org
@@ -21,6 +23,7 @@
 - **Files**: `apps/web/app/api/admin/name-change-requests/route.ts`, `apps/web/app/api/user/name-change-request/route.ts`
 
 #### 2. Auth Cookie Security - FIXED (XSS Vulnerability)
+
 - **Issue**: `sb-access-token` cookie was set with `httpOnly: false`, exposing tokens to XSS attacks
 - **Root Cause**: Incorrect comment claimed "browser JavaScript must read it" - analysis showed this was false
 - **Fix**: Set `httpOnly: true` on all auth cookies
@@ -28,6 +31,7 @@
 - **Verification**: Grep confirmed zero client-side cookie reads; all API routes use existing `extractAccessToken()`
 
 #### 3. LLM Integration - DEBUGGED
+
 - **Issue**: LLM endpoints returning 500 errors
 - **Root Cause**: Outdated model name + missing error logging
 - **Fixes**:
@@ -37,6 +41,7 @@
 - **Files**: `packages/llm/client.ts`, `.env.example`
 
 #### 4. Member Table Audit Field - MIGRATION CREATED
+
 - **Issue**: `member` table missing `updated_at` column
 - **Fix**: Created migration `20251127_add_member_updated_at.sql` with:
   - Idempotent column addition
@@ -45,11 +50,13 @@
 - **Status**: Ready to apply to production
 
 #### 5. TypeScript Types - VERIFIED
+
 - **Issue**: Types potentially out of sync with database
 - **Finding**: Types are already up to date with all tables (super_admin, notification, name_change_request) and columns
 - **Status**: No changes needed
 
 #### 6. Duplicate Migrations - DOCUMENTED
+
 - **Issue**: Multiple migrations with same 20251024 prefix causing confusion
 - **Fix**: Created `MIGRATION_NOTES.md` documenting:
   - Which migrations were applied
@@ -60,12 +67,14 @@
 ### Manual Actions Required
 
 1. **Apply Migration** (Required):
+
    ```sql
    -- Run in Supabase SQL Editor:
    -- Copy contents of packages/db/migrations/20251127_add_member_updated_at.sql
    ```
 
 2. **Archive Duplicate Migrations** (Optional):
+
    ```bash
    mkdir -p packages/db/migrations/archive
    mv packages/db/migrations/20251024_add_member_status.sql archive/
@@ -76,6 +85,7 @@
 3. **Deploy to Vercel** - Push changes to activate fixes
 
 ### Documentation Created
+
 - `AGENT_WORK_LOG.md` - Detailed fix session log with timestamps
 - `MIGRATION_INSTRUCTIONS_20251127.md` - Step-by-step migration guide
 - `packages/db/migrations/MIGRATION_NOTES.md` - Migration cleanup recommendations
@@ -111,6 +121,7 @@
 ```
 
 The migration will:
+
 1. Add `updated_at` column with default NOW()
 2. Backfill existing rows with created_at timestamp
 3. Set NOT NULL constraint after backfill

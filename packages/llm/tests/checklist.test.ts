@@ -9,10 +9,14 @@ import {
   type ChecklistGenerationInput,
 } from "../prompts/checklist";
 
-// Mock the Anthropic client
-vi.mock("../client", () => ({
-  callClaude: vi.fn(),
-}));
+// Mock the CacheGPT client
+vi.mock("../client", () => {
+  const mockFn = vi.fn();
+  return {
+    callCacheGPT: mockFn,
+    callClaude: mockFn, // Backwards compatibility alias
+  };
+});
 
 describe("Checklist Generation", () => {
   beforeEach(() => {
@@ -31,10 +35,10 @@ describe("Checklist Generation", () => {
   };
 
   it("should generate checklist items", async () => {
-    const { callClaude } = await import("../client");
+    const { callCacheGPT } = await import("../client");
 
     // Mock successful LLM response
-    vi.mocked(callClaude).mockResolvedValue({
+    vi.mocked(callCacheGPT).mockResolvedValue({
       success: true,
       data: JSON.stringify([
         {
@@ -66,9 +70,9 @@ describe("Checklist Generation", () => {
   });
 
   it("should handle LLM API errors", async () => {
-    const { callClaude } = await import("../client");
+    const { callCacheGPT } = await import("../client");
 
-    vi.mocked(callClaude).mockResolvedValue({
+    vi.mocked(callCacheGPT).mockResolvedValue({
       success: false,
       data: null,
       error: "API rate limit exceeded",
@@ -81,9 +85,9 @@ describe("Checklist Generation", () => {
   });
 
   it("should handle invalid JSON responses", async () => {
-    const { callClaude } = await import("../client");
+    const { callCacheGPT } = await import("../client");
 
-    vi.mocked(callClaude).mockResolvedValue({
+    vi.mocked(callCacheGPT).mockResolvedValue({
       success: true,
       data: "This is not valid JSON",
       error: null,
@@ -96,9 +100,9 @@ describe("Checklist Generation", () => {
   });
 
   it("should include policy snippets in prompt", async () => {
-    const { callClaude } = await import("../client");
+    const { callCacheGPT } = await import("../client");
 
-    vi.mocked(callClaude).mockResolvedValue({
+    vi.mocked(callCacheGPT).mockResolvedValue({
       success: true,
       data: "[]",
       error: null,
@@ -106,7 +110,7 @@ describe("Checklist Generation", () => {
 
     await generateChecklist(mockInput);
 
-    const callArgs = vi.mocked(callClaude).mock.calls[0][0];
+    const callArgs = vi.mocked(callCacheGPT).mock.calls[0][0];
     expect(callArgs.messages[0].content).toContain(
       "Prior imaging reports required"
     );

@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@greenlight/db": "*",
+    "@greenlight/email": "*",
     "@greenlight/llm": "*",
     "@greenlight/ocr": "*",
     "@greenlight/pdfkit": "*",

@@ -56,7 +56,11 @@ export async function GET(request: Request) {
       );
 
       // Set the refresh token cookie (also httpOnly for security)
-      response.cookies.set("sb-refresh-token", data.session.refresh_token, cookieOptions);
+      response.cookies.set(
+        "sb-refresh-token",
+        data.session.refresh_token,
+        cookieOptions
+      );
 
       // Check if user needs provisioning (org/member records)
       if (data.user) {

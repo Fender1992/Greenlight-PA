@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from "next/server";
 import type { Database } from "@greenlight/db/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { HttpError, getScopedClient, requireUser } from "../../_lib/org";
+import { sendEmailNotification } from "@greenlight/email";
+import { supabaseAdmin } from "@greenlight/db";
 
 type PaRequestRow = Database["public"]["Tables"]["pa_request"]["Row"];
 type OrderRow = Database["public"]["Tables"]["order"]["Row"];
@@ -251,6 +253,43 @@ export async function PATCH(
           500,
           refetchError?.message || "Failed to load PA request"
         );
+      }
+
+      // Send email notification for status change (non-blocking)
+      // Only send for important status changes
+      if (
+        ["submitted", "approved", "denied", "pending_info"].includes(status)
+      ) {
+        const paData = refreshed as unknown as PaRequestWithDetails;
+
+        // Get creator email if available
+        if (paData.created_by) {
+          supabaseAdmin.auth.admin
+            .getUserById(paData.created_by)
+            .then(({ data: userData }) => {
+              if (userData.user?.email && paData.order?.patient) {
+                sendEmailNotification({
+                  to: userData.user.email,
+                  type: "pa_status_changed",
+                  data: {
+                    patientName: paData.order.patient.name,
+                    orderId: paData.order_id,
+                    status,
+                    note,
+                    paRequestId: id,
+                    appUrl:
+                      process.env.NEXT_PUBLIC_APP_URL ||
+                      "http://localhost:3000",
+                  },
+                }).catch((err) => {
+                  console.error("Failed to send PA status email:", err);
+                });
+              }
+            })
+            .catch((err) => {
+              console.error("Failed to fetch user for email:", err);
+            });
+        }
       }
 
       const enriched = await buildPaResponse(
