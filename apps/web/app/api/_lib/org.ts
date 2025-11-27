@@ -103,7 +103,21 @@ export async function resolveOrgId(
       return providedOrgId;
     }
 
-    // Super admins MUST specify org_id for admin operations
+    // For ambiguous cases (like auth status check), return first org
+    if (options.allowAmbiguous) {
+      const { data: orgs } = await supabaseAdmin
+        .from("org")
+        .select("id")
+        .order("created_at", { ascending: true })
+        .limit(1);
+
+      if (orgs && orgs.length > 0) {
+        return orgs[0].id;
+      }
+      throw new HttpError(404, "No organizations found in the system");
+    }
+
+    // Super admins MUST specify org_id for non-ambiguous operations
     throw new HttpError(
       400,
       "org_id parameter is required for super admin operations. Please specify the target organization using the org_id query parameter or in the request body."
