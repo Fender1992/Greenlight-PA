@@ -402,49 +402,12 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 sm:gap-4">
               {!loading && (
                 <>
                   {user && (
                     <>
-                      {/* Mobile menu button - Always visible on mobile */}
-                      <button
-                        onClick={() => setShowMobileMenu(!showMobileMenu)}
-                        className="sm:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
-                        aria-expanded={showMobileMenu}
-                      >
-                        <span className="sr-only">Open main menu</span>
-                        {!showMobileMenu ? (
-                          <svg
-                            className="block h-6 w-6"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M4 6h16M4 12h16M4 18h16"
-                            />
-                          </svg>
-                        ) : (
-                          <svg
-                            className="block h-6 w-6"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
-                        )}
-                      </button>
-
+                      {/* Desktop elements first, then mobile menu button */}
                       {/* Notifications - Desktop only */}
                       <div className="hidden sm:block relative notifications-menu">
                         <button
@@ -467,8 +430,8 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
                             />
                           </svg>
                           {unreadCount > 0 && (
-                            <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
-                              {unreadCount}
+                            <span className="absolute -top-1 -right-1 inline-flex items-center justify-center h-5 min-w-[20px] px-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
+                              {unreadCount > 99 ? "99+" : unreadCount}
                             </span>
                           )}
                         </button>
@@ -603,7 +566,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
                               onClick={() =>
                                 setShowOrgSelector(!showOrgSelector)
                               }
-                              className="flex items-center gap-2 px-3 py-1.5 text-sm bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-xs"
+                              className="flex items-center gap-2 px-3 py-1.5 text-sm bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-[200px]"
                               title={
                                 selectedOrgId
                                   ? memberships.find(
@@ -625,7 +588,7 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
                                   d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
                                 />
                               </svg>
-                              <span className="truncate max-w-[150px]">
+                              <span className="truncate">
                                 {selectedOrgId
                                   ? memberships.find(
                                       (m) => m.org_id === selectedOrgId
@@ -700,11 +663,11 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
                       <div className="hidden sm:block relative profile-menu">
                         <button
                           onClick={() => setShowProfileMenu(!showProfileMenu)}
-                          className="flex items-center text-sm text-gray-700 hover:text-gray-900"
+                          className="flex items-center text-sm text-gray-700 hover:text-gray-900 max-w-[200px]"
                         >
-                          <span>{displayName}</span>
+                          <span className="truncate">{displayName}</span>
                           <svg
-                            className="ml-2 h-4 w-4"
+                            className="ml-2 h-4 w-4 flex-shrink-0"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -749,6 +712,44 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
                           </div>
                         )}
                       </div>
+
+                      {/* Mobile menu button - at the end on mobile */}
+                      <button
+                        onClick={() => setShowMobileMenu(!showMobileMenu)}
+                        className="sm:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+                        aria-expanded={showMobileMenu}
+                      >
+                        <span className="sr-only">Open main menu</span>
+                        {!showMobileMenu ? (
+                          <svg
+                            className="block h-6 w-6"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 6h16M4 12h16M4 18h16"
+                            />
+                          </svg>
+                        ) : (
+                          <svg
+                            className="block h-6 w-6"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        )}
+                      </button>
                     </>
                   )}
                   {!user && (
