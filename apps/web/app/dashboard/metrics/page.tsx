@@ -241,21 +241,23 @@ export default function MetricsPage() {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Monthly Trend
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {metrics.trends.map((item) => (
-                <div
-                  key={item.month}
-                  className="p-4 border border-gray-200 rounded-lg"
-                >
-                  <div className="text-sm text-gray-500">{item.month}</div>
-                  <div className="text-2xl font-bold text-gray-900">
-                    {item.requests}
+            <div className="overflow-x-auto">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 min-w-max md:min-w-0">
+                {metrics.trends.map((item) => (
+                  <div
+                    key={item.month}
+                    className="p-4 border border-gray-200 rounded-lg min-w-[140px]"
+                  >
+                    <div className="text-sm text-gray-500">{item.month}</div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {item.requests}
+                    </div>
+                    <div className="text-xs text-green-600">
+                      Approval: {item.approvalRate}%
+                    </div>
                   </div>
-                  <div className="text-xs text-green-600">
-                    Approval: {item.approvalRate}%
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </>

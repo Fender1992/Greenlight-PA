@@ -17,9 +17,9 @@ export default function AdminPage() {
   const [showPayerForm, setShowPayerForm] = useState(false);
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
 
-  // Persist selectedOrgId to sessionStorage
+  // Persist selectedOrgId to localStorage
   useEffect(() => {
-    const storedOrgId = sessionStorage.getItem("admin_selected_org_id");
+    const storedOrgId = localStorage.getItem("admin_selected_org_id");
     if (storedOrgId) {
       setSelectedOrgId(storedOrgId);
     }
@@ -27,7 +27,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (selectedOrgId) {
-      sessionStorage.setItem("admin_selected_org_id", selectedOrgId);
+      localStorage.setItem("admin_selected_org_id", selectedOrgId);
     }
   }, [selectedOrgId]);
 
@@ -164,7 +164,10 @@ export default function AdminPage() {
 
       <div className="bg-white rounded-lg shadow">
         <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+          <nav
+            className="-mb-px flex flex-wrap gap-x-4 sm:gap-x-8 px-4 sm:px-6"
+            aria-label="Tabs"
+          >
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -181,20 +184,20 @@ export default function AdminPage() {
           </nav>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {activeTab === "payers" && (
             <div className="space-y-4">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <input
                   type="text"
                   placeholder="Search payers..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full md:max-w-sm px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full sm:max-w-sm px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
                 <button
                   onClick={() => setShowPayerForm((prev) => !prev)}
-                  className="ml-auto px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                  className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
                 >
                   {showPayerForm ? "Cancel" : "+ Add Payer"}
                 </button>
@@ -205,7 +208,7 @@ export default function AdminPage() {
                   onSubmit={handleCreatePayer}
                   className="border border-gray-200 rounded-lg p-4 space-y-3"
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Payer Name
@@ -307,7 +310,7 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <form className="space-y-4" onSubmit={handleUpdateOrg}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Organization Name
@@ -328,7 +331,7 @@ export default function AdminPage() {
                         className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
-                    <div className="md:col-span-2">
+                    <div className="sm:col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Address
                       </label>

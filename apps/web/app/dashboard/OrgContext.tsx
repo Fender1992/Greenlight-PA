@@ -105,8 +105,8 @@ export function OrgProvider({ children }: { children: ReactNode }) {
 
         setMemberships(typedMemberships);
 
-        // Try to restore selection from sessionStorage
-        const storedOrgId = sessionStorage.getItem("dashboard_selected_org_id");
+        // Try to restore selection from localStorage
+        const storedOrgId = localStorage.getItem("dashboard_selected_org_id");
 
         if (
           storedOrgId &&
@@ -117,7 +117,7 @@ export function OrgProvider({ children }: { children: ReactNode }) {
         } else if (typedMemberships.length === 1) {
           // Auto-select if user has only one org
           setSelectedOrgIdState(typedMemberships[0].org_id);
-          sessionStorage.setItem(
+          localStorage.setItem(
             "dashboard_selected_org_id",
             typedMemberships[0].org_id
           );
@@ -138,7 +138,7 @@ export function OrgProvider({ children }: { children: ReactNode }) {
 
   const setSelectedOrgId = (orgId: string) => {
     setSelectedOrgIdState(orgId);
-    sessionStorage.setItem("dashboard_selected_org_id", orgId);
+    localStorage.setItem("dashboard_selected_org_id", orgId);
   };
 
   return (

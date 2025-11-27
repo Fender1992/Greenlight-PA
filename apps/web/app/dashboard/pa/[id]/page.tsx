@@ -273,10 +273,12 @@ export default function PADetailPage() {
         <span className="text-gray-700">{paId}</span>
       </nav>
 
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 sm:gap-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{paId}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+              {paId}
+            </h1>
             <div className="flex items-center gap-3">
               <span
                 className={`px-3 py-1 inline-flex text-sm font-semibold rounded-full ${
@@ -303,18 +305,18 @@ export default function PADetailPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full lg:w-auto">
             <button
               onClick={() => submitMutation.mutate()}
               disabled={submitMutation.isPending || data.status !== "draft"}
-              className="px-4 py-2 border border-transparent rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 border border-transparent rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 whitespace-nowrap"
             >
               {submitMutation.isPending ? "Submitting…" : "Submit PA"}
             </button>
             <button
               onClick={() => checklistMutation.mutate()}
               disabled={checklistMutation.isPending}
-              className={`px-4 py-2 border rounded-md text-sm font-medium disabled:opacity-50 ${
+              className={`px-4 py-2 border rounded-md text-sm font-medium disabled:opacity-50 whitespace-nowrap ${
                 checklistMutation.isError
                   ? "border-red-300 text-red-700 bg-red-50 hover:bg-red-100"
                   : "border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
@@ -329,7 +331,7 @@ export default function PADetailPage() {
             <button
               onClick={() => necessityMutation.mutate()}
               disabled={necessityMutation.isPending}
-              className={`px-4 py-2 border rounded-md text-sm font-medium disabled:opacity-50 ${
+              className={`px-4 py-2 border rounded-md text-sm font-medium disabled:opacity-50 whitespace-nowrap ${
                 necessityMutation.isError
                   ? "border-red-300 text-red-700 bg-red-50 hover:bg-red-100"
                   : "border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
@@ -343,13 +345,13 @@ export default function PADetailPage() {
             </button>
             <button
               onClick={downloadApprovalSummary}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 whitespace-nowrap"
             >
               Download Approval Summary
             </button>
             <button
               onClick={downloadCoverLetter}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 whitespace-nowrap"
             >
               Download Cover Letter
             </button>
@@ -358,12 +360,12 @@ export default function PADetailPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow p-6 space-y-4 lg:col-span-2">
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6 space-y-4 lg:col-span-2">
           <section>
             <h2 className="text-lg font-semibold text-gray-900 mb-3">
               Patient Information
             </h2>
-            <div className="grid grid-cols-2 gap-4 text-sm text-gray-700">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-700">
               <div>
                 <div className="text-xs text-gray-500">Name</div>
                 <div>{data.order?.patient?.name ?? "—"}</div>
@@ -391,7 +393,7 @@ export default function PADetailPage() {
             <h2 className="text-lg font-semibold text-gray-900 mb-3">
               Order Details
             </h2>
-            <div className="grid grid-cols-2 gap-4 text-sm text-gray-700">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-700">
               <div>
                 <div className="text-xs text-gray-500">Modality</div>
                 <div>{data.order?.modality ?? "—"}</div>
@@ -562,7 +564,7 @@ export default function PADetailPage() {
           </section>
         </div>
 
-        <aside className="bg-white rounded-lg shadow p-6 space-y-4">
+        <aside className="bg-white rounded-lg shadow p-4 sm:p-6 space-y-4">
           <section>
             <h3 className="text-sm font-semibold text-gray-900 mb-2">
               Timeline

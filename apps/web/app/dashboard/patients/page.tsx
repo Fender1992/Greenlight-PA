@@ -394,8 +394,8 @@ export default function PatientsPage() {
       {showAddModal && (
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">
+            <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">
                 Add New Patient
               </h2>
             </div>
@@ -406,7 +406,7 @@ export default function PatientsPage() {
                 setFormError(null);
                 createPatientMutation.mutate(formData);
               }}
-              className="px-6 py-4 space-y-4"
+              className="px-4 sm:px-6 py-4 space-y-4"
             >
               {formError && (
                 <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800">
@@ -430,7 +430,7 @@ export default function PatientsPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     MRN
@@ -461,7 +461,7 @@ export default function PatientsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Sex
@@ -511,7 +511,7 @@ export default function PatientsPage() {
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={() => {

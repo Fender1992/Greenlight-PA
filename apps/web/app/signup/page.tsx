@@ -221,7 +221,7 @@ export default function SignupPage() {
         </div>
 
         {/* Step Indicator */}
-        <div className="flex items-center justify-center space-x-4">
+        <div className="flex items-center justify-center space-x-2 sm:space-x-4">
           <div
             className={`flex items-center ${step === "credentials" ? "text-blue-600" : "text-gray-400"}`}
           >
@@ -230,9 +230,11 @@ export default function SignupPage() {
             >
               1
             </div>
-            <span className="ml-2 text-sm font-medium">Credentials</span>
+            <span className="ml-2 text-xs sm:text-sm font-medium">
+              Credentials
+            </span>
           </div>
-          <div className="w-16 h-0.5 bg-gray-300"></div>
+          <div className="w-8 sm:w-16 h-0.5 bg-gray-300"></div>
           <div
             className={`flex items-center ${step === "organization" ? "text-blue-600" : "text-gray-400"}`}
           >
@@ -241,7 +243,9 @@ export default function SignupPage() {
             >
               2
             </div>
-            <span className="ml-2 text-sm font-medium">Organization</span>
+            <span className="ml-2 text-xs sm:text-sm font-medium">
+              Organization
+            </span>
           </div>
         </div>
 
@@ -420,11 +424,11 @@ export default function SignupPage() {
             {!message && (
               <>
                 {/* Organization Mode Toggle */}
-                <div className="flex rounded-md shadow-sm">
+                <div className="flex flex-col sm:flex-row rounded-md shadow-sm gap-2 sm:gap-0">
                   <button
                     type="button"
                     onClick={() => setOrgMode("join")}
-                    className={`flex-1 px-4 py-2 text-sm font-medium rounded-l-md border ${
+                    className={`flex-1 px-4 py-2 text-sm font-medium rounded-md sm:rounded-l-md sm:rounded-r-none border ${
                       orgMode === "join"
                         ? "bg-blue-600 text-white border-blue-600"
                         : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
@@ -435,7 +439,7 @@ export default function SignupPage() {
                   <button
                     type="button"
                     onClick={() => setOrgMode("create")}
-                    className={`flex-1 px-4 py-2 text-sm font-medium rounded-r-md border ${
+                    className={`flex-1 px-4 py-2 text-sm font-medium rounded-md sm:rounded-r-md sm:rounded-l-none border ${
                       orgMode === "create"
                         ? "bg-blue-600 text-white border-blue-600"
                         : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
@@ -546,7 +550,7 @@ export default function SignupPage() {
                     </div>
                   )}
 
-                  <div className="flex gap-3 mt-6">
+                  <div className="flex flex-col sm:flex-row gap-3 mt-6">
                     <button
                       type="button"
                       onClick={() => setStep("credentials")}

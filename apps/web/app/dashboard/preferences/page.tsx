@@ -291,7 +291,7 @@ export default function PreferencesPage() {
             ) : (
               <form onSubmit={handleSaveProfile} className="space-y-4">
                 {/* Name fields - Read only with request button */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label
                       htmlFor="firstName"
@@ -387,7 +387,7 @@ export default function PreferencesPage() {
                   />
                 </div>
 
-                <div className="flex gap-3 pt-2">
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
                   <button
                     type="submit"
                     disabled={isSavingProfile}
@@ -462,7 +462,7 @@ export default function PreferencesPage() {
                 />
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button
                   type="submit"
                   disabled={isChangingPassword}
